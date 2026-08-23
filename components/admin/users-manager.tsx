@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -175,7 +176,14 @@ function UserRow({ profile }: { profile: Profile }) {
 
   return (
     <TableRow>
-      <TableCell className="font-medium">{profile.nombre}</TableCell>
+      <TableCell className="font-medium">
+        <Link
+          href={`/admin/usuarios/${profile.id}`}
+          className="focus-ring text-primary hover:underline"
+        >
+          {profile.nombre}
+        </Link>
+      </TableCell>
       <TableCell>{profile.email}</TableCell>
       <TableCell>
         <Select

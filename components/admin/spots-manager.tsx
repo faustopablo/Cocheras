@@ -606,8 +606,17 @@ function DiasChipsSelector({
     onChange(value.includes(dia) ? value.filter((d) => d !== dia) : [...value, dia].sort());
   }
 
+  const diasDisponibles = DIAS_SEMANA.map((d) => d.value).filter((v) => !deshabilitados.has(v));
+  const todosSeleccionados =
+    diasDisponibles.length > 0 && diasDisponibles.every((v) => value.includes(v));
+
+  function toggleTodos() {
+    if (diasDisponibles.length === 0) return;
+    onChange(todosSeleccionados ? [] : [...diasDisponibles].sort());
+  }
+
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       {DIAS_SEMANA.map((d) => {
         const seleccionado = value.includes(d.value);
         const ocupado = deshabilitados.has(d.value);
@@ -630,6 +639,21 @@ function DiasChipsSelector({
           </button>
         );
       })}
+      <button
+        type="button"
+        title={todosSeleccionados ? "Deseleccionar todos los días" : "Seleccionar todos los días"}
+        disabled={diasDisponibles.length === 0}
+        onClick={toggleTodos}
+        className={cn(
+          "h-8 rounded-full border px-3 text-xs font-semibold transition-colors",
+          todosSeleccionados
+            ? "border-primary bg-primary text-primary-foreground"
+            : "border-border bg-card text-foreground hover:bg-muted",
+          diasDisponibles.length === 0 && "cursor-not-allowed opacity-40"
+        )}
+      >
+        Todos los días
+      </button>
     </div>
   );
 }
