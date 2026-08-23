@@ -69,3 +69,32 @@ export function toLocalDateValue(date: Date) {
   const pad = (n: number) => n.toString().padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
+
+/** true si `a` y `b` caen en el mismo día calendario (hora local). */
+export function isSameLocalDate(a: Date, b: Date) {
+  return toLocalDateValue(a) === toLocalDateValue(b);
+}
+
+/** Devuelve una nueva fecha desplazada `dias` días (hora local, a las 00:00). */
+export function addDays(date: Date, dias: number) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + dias);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/** Lunes (00:00 local) de la semana ISO a la que pertenece `date`. */
+export function startOfIsoWeek(date: Date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return addDays(d, -(isoWeekday(d) - 1));
+}
+
+/** "23/08/2026" a partir de un `Date` (sin pasar por ISO string). */
+export function formatDateShort(date: Date) {
+  return date.toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}

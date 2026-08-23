@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronDown, ChevronRight, ChevronLeft, Maximize2, Minimize2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SpotCard } from "@/components/spot-card";
@@ -9,8 +10,21 @@ import { ReservationDialog } from "@/components/reservation-dialog";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { FixedSpotReleaseDialog } from "@/components/fixed-spot-release-dialog";
 import { cancelFixedSpotReleaseAction } from "@/app/actions/reservations";
-import { getOwningAssignmentOnDate, isSpotReleasedOnDate } from "@/lib/spot-status";
-import { formatDate, formatDias } from "@/lib/utils";
+import {
+  getOwningAssignmentOnDate,
+  isSpotReleasedOnDate,
+  computeSpotDisplayForDate,
+} from "@/lib/spot-status";
+import {
+  DIAS_SEMANA,
+  addDays,
+  cn,
+  formatDate,
+  formatDateShort,
+  formatDias,
+  isSameLocalDate,
+  startOfIsoWeek,
+} from "@/lib/utils";
 import type {
   Building,
   FixedSpotAssignment,
@@ -19,6 +33,8 @@ import type {
   ParkingSpot,
   Reservation,
 } from "@/lib/database.types";
+
+type Filtro = "todos" | "libres";
 
 export function SpotsBoard({
   buildings,
@@ -41,6 +57,13 @@ export function SpotsBoard({
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingReleaseId, setPendingReleaseId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [filtro, setFiltro] = useState<Filtro>("todos");
+  const [expandedBuildings, setExpandedBuildings] = useState<Record<string, boolean>>({});
+  const [expandedLevels, setExpandedLevels] = useState<Record<string, boolean>>({});
+
+  const hoy = useMemo(() => new Date(), []);
+  const esHoy = isSameLocalDate(selectedDate, hoy);
 
   const reservationBySpot = useMemo(() => {
     const map = new Map<string, Reservation>();
@@ -99,6 +122,49 @@ export function SpotsBoard({
     return map;
   }, [spots]);
 
+  // Estado/estilo de cada cochera proyectado para `selectedDate`. Ver
+  // límites de la proyección futura en computeSpotDisplayForDate.
+  const displayBySpotId = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof computeSpotDisplayForDate>>();
+    for (const s of spots) {
+      map.set(
+        s.id,
+        computeSpotDisplayForDate(
+          s,
+          fixedSpotAssignments,
+          fixedSpotReleases,
+          reservationBySpot.get(s.id),
+          currentUserId,
+          selectedDate
+        )
+      );
+    }
+    return map;
+  }, [spots, fixedSpotAssignments, fixedSpotReleases, reservationBySpot, currentUserId, selectedDate]);
+
+  function isBuildingExpanded(id: string) {
+    return expandedBuildings[id] ?? true;
+  }
+  function isLevelExpanded(id: string) {
+    return expandedLevels[id] ?? true;
+  }
+  function toggleBuilding(id: string) {
+    setExpandedBuildings((prev) => ({ ...prev, [id]: !isBuildingExpanded(id) }));
+  }
+  function toggleLevel(id: string) {
+    setExpandedLevels((prev) => ({ ...prev, [id]: !isLevelExpanded(id) }));
+  }
+  function expandirTodo() {
+    setExpandedBuildings(Object.fromEntries(buildings.map((b) => [b.id, true])));
+    setExpandedLevels(Object.fromEntries(levels.map((l) => [l.id, true])));
+  }
+  function contraerTodo() {
+    setExpandedBuildings(Object.fromEntries(buildings.map((b) => [b.id, false])));
+    setExpandedLevels(Object.fromEntries(levels.map((l) => [l.id, false])));
+  }
+
+  const semanaDeSeleccion = useMemo(() => startOfIsoWeek(selectedDate), [selectedDate]);
+
   async function handleCancelarLiberacion(releaseId: string) {
     if (!confirm("¿Cancelar esta liberación? Las reservas que otros hayan hecho dentro del rango no se cancelan automáticamente.")) {
       return;
@@ -110,9 +176,20 @@ export function SpotsBoard({
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <RealtimeRefresher
         tables={["parking_spots", "reservations", "fixed_spot_assignments", "fixed_spot_releases"]}
+      />
+
+      <BoardToolbar
+        selectedDate={selectedDate}
+        esHoy={esHoy}
+        semanaDeSeleccion={semanaDeSeleccion}
+        filtro={filtro}
+        onFiltroChange={setFiltro}
+        onDateChange={setSelectedDate}
+        onExpandirTodo={expandirTodo}
+        onContraerTodo={contraerTodo}
       />
 
       {misAsignaciones.length > 0 && (
@@ -198,52 +275,229 @@ export function SpotsBoard({
         </Card>
       )}
 
-      {buildings.map((building) => (
-        <section key={building.id} className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-foreground">{building.nombre}</h2>
-            {building.direccion && (
-              <p className="text-sm text-muted-foreground">{building.direccion}</p>
-            )}
-          </div>
+      {buildings.map((building) => {
+        const buildingSpots = spots.filter((s) => s.building_id === building.id);
+        const libresEdificio = buildingSpots.filter(
+          (s) => displayBySpotId.get(s.id)?.estado === "libre"
+        ).length;
+        const buildingLevels = (levelsByBuilding.get(building.id) ?? []).filter(
+          (level) => (spotsByLevel.get(level.id) ?? []).length > 0
+        );
+        if (filtro === "libres" && libresEdificio === 0) return null;
+        const expanded = isBuildingExpanded(building.id);
 
-          {(levelsByBuilding.get(building.id) ?? []).map((level) => {
-            const levelSpots = spotsByLevel.get(level.id) ?? [];
-            if (levelSpots.length === 0) return null;
-            return (
-              <div key={level.id} className="flex flex-col gap-2">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  {level.nombre}
-                </h3>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                  {levelSpots.map((spot) => (
-                    <SpotCard
-                      key={spot.id}
-                      spot={spot}
-                      activeReservation={reservationBySpot.get(spot.id)}
-                      esMia={
-                        spot.tipo === "fija" &&
-                        getOwningAssignmentOnDate(fixedSpotAssignments, spot.id)?.user_id === currentUserId
-                      }
-                      isReleasedToday={
-                        spot.tipo === "fija"
-                          ? isSpotReleasedOnDate(fixedSpotAssignments, fixedSpotReleases, spot.id)
-                          : undefined
-                      }
-                      onReservar={(s) => {
-                        setSelectedSpot(s);
-                        setDialogOpen(true);
-                      }}
-                    />
-                  ))}
+        return (
+          <section key={building.id} className="overflow-hidden rounded-xl border border-border bg-card">
+            <button
+              type="button"
+              onClick={() => toggleBuilding(building.id)}
+              className="focus-ring flex w-full items-center justify-between gap-3 bg-muted/70 px-4 py-3 text-left"
+            >
+              <div className="flex items-center gap-2">
+                {expanded ? (
+                  <ChevronDown className="h-4 w-4 shrink-0 text-comafi-negro-verdoso" aria-hidden />
+                ) : (
+                  <ChevronRight className="h-4 w-4 shrink-0 text-comafi-negro-verdoso" aria-hidden />
+                )}
+                <div>
+                  <h2 className="text-base font-bold text-foreground sm:text-lg">{building.nombre}</h2>
+                  {building.direccion && (
+                    <p className="text-xs text-muted-foreground">{building.direccion}</p>
+                  )}
                 </div>
               </div>
-            );
-          })}
-        </section>
-      ))}
+              <span className="shrink-0 rounded-full bg-comafi-verde-claro px-3 py-1 text-xs font-bold text-white">
+                Libres: {libresEdificio}
+              </span>
+            </button>
+
+            {expanded && (
+              <div className="flex flex-col gap-3 p-3 sm:p-4">
+                {buildingLevels.map((level) => {
+                  const levelSpotsAll = spotsByLevel.get(level.id) ?? [];
+                  const libresNivel = levelSpotsAll.filter(
+                    (s) => displayBySpotId.get(s.id)?.estado === "libre"
+                  ).length;
+                  const levelSpots =
+                    filtro === "libres"
+                      ? levelSpotsAll.filter((s) => displayBySpotId.get(s.id)?.estado === "libre")
+                      : levelSpotsAll;
+                  if (filtro === "libres" && levelSpots.length === 0) return null;
+                  const levelExpanded = isLevelExpanded(level.id);
+
+                  return (
+                    <div key={level.id} className="overflow-hidden rounded-lg border border-border">
+                      <button
+                        type="button"
+                        onClick={() => toggleLevel(level.id)}
+                        className="focus-ring flex w-full items-center justify-between gap-2 bg-comafi-verde-oscuro px-3 py-2 text-left text-white"
+                      >
+                        <div className="flex items-center gap-2">
+                          {levelExpanded ? (
+                            <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                          ) : (
+                            <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                          )}
+                          <h3 className="text-xs font-semibold uppercase tracking-wide sm:text-sm">
+                            {level.nombre}
+                          </h3>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-bold">
+                          Libres: {libresNivel}
+                        </span>
+                      </button>
+
+                      {levelExpanded && (
+                        <div className="grid grid-cols-4 gap-2 bg-card p-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
+                          {levelSpots.map((spot) => (
+                            <SpotCard
+                              key={spot.id}
+                              spot={spot}
+                              display={
+                                displayBySpotId.get(spot.id) ?? {
+                                  estado: spot.estado,
+                                  esMia: false,
+                                  esReservaPropia: false,
+                                  reservaActiva: null,
+                                  esProyeccion: !esHoy,
+                                }
+                              }
+                              onReservar={(s) => {
+                                setSelectedSpot(s);
+                                setDialogOpen(true);
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        );
+      })}
 
       <ReservationDialog spot={selectedSpot} open={dialogOpen} onOpenChange={setDialogOpen} />
+    </div>
+  );
+}
+
+function BoardToolbar({
+  selectedDate,
+  esHoy,
+  semanaDeSeleccion,
+  filtro,
+  onFiltroChange,
+  onDateChange,
+  onExpandirTodo,
+  onContraerTodo,
+}: {
+  selectedDate: Date;
+  esHoy: boolean;
+  semanaDeSeleccion: Date;
+  filtro: Filtro;
+  onFiltroChange: (f: Filtro) => void;
+  onDateChange: (d: Date) => void;
+  onExpandirTodo: () => void;
+  onContraerTodo: () => void;
+}) {
+  const hoy = new Date();
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 sm:p-4">
+      <div className="flex items-center justify-between gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label="Día anterior"
+          disabled={isSameLocalDate(selectedDate, hoy)}
+          onClick={() => onDateChange(addDays(selectedDate, -1))}
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden />
+        </Button>
+
+        <div className="flex flex-col items-center">
+          <span className="text-sm font-bold text-foreground sm:text-base">
+            {formatDateShort(selectedDate)}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {esHoy ? "Hoy — estado en vivo" : "Disponibilidad proyectada"}
+          </span>
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label="Día siguiente"
+          onClick={() => onDateChange(addDays(selectedDate, 1))}
+        >
+          <ChevronRight className="h-4 w-4" aria-hidden />
+        </Button>
+      </div>
+
+      <div className="flex items-center justify-center gap-1.5">
+        {DIAS_SEMANA.map((d) => {
+          const diaDate = addDays(semanaDeSeleccion, d.value - 1);
+          const activo = isSameLocalDate(diaDate, selectedDate);
+          return (
+            <button
+              key={d.value}
+              type="button"
+              onClick={() => onDateChange(diaDate)}
+              aria-pressed={activo}
+              aria-label={d.label}
+              className={cn(
+                "focus-ring flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors",
+                activo
+                  ? "bg-comafi-verde-claro text-white"
+                  : "bg-muted text-muted-foreground hover:bg-accent"
+              )}
+            >
+              {d.corta}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex gap-1.5 rounded-full bg-muted p-1">
+          <button
+            type="button"
+            onClick={() => onFiltroChange("todos")}
+            className={cn(
+              "focus-ring rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+              filtro === "todos" ? "bg-comafi-negro-verdoso text-white" : "text-muted-foreground"
+            )}
+          >
+            Todos
+          </button>
+          <button
+            type="button"
+            onClick={() => onFiltroChange("libres")}
+            className={cn(
+              "focus-ring rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+              filtro === "libres" ? "bg-comafi-verde-claro text-white" : "text-muted-foreground"
+            )}
+          >
+            Libres
+          </button>
+        </div>
+
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={onExpandirTodo}>
+            <Maximize2 className="h-3.5 w-3.5" aria-hidden />
+            Expandir
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={onContraerTodo}>
+            <Minimize2 className="h-3.5 w-3.5" aria-hidden />
+            Contraer
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -83,6 +83,72 @@ export function computeSpotDisplayStatus(
   return spot.estado;
 }
 
+/** Resultado de proyectar el estado visual de una cochera para una fecha dada. */
+export interface SpotDisplayInfo {
+  estado: EstadoCochera;
+  /** true si la cochera es "mía": la reserva activa es mía, o (si es fija)
+   * el dueño asignado ese día de la semana soy yo, esté liberada o no. */
+  esMia: boolean;
+  /** true específicamente cuando hay una reserva puntual activa y es mía
+   * (permite mostrar la hora de fin). */
+  esReservaPropia: boolean;
+  /** La reserva activa considerada para esta fecha, si corresponde. */
+  reservaActiva: Reservation | null;
+  /** true si `date` no es hoy: la disponibilidad de reservas puntuales no
+   * se proyecta (ver limitación en `computeSpotDisplayForDate`). */
+  esProyeccion: boolean;
+}
+
+/**
+ * Proyecta el estado visual de una cochera para `date` (hoy por defecto),
+ * combinando el estado en vivo (hoy) con la disponibilidad fija proyectada
+ * (asignaciones por día de semana + liberaciones) para fechas futuras.
+ *
+ * Límite conocido: para fechas distintas de hoy NO se proyectan reservas
+ * puntuales (ni de cocheras `tipo: 'libre'` ni las hechas sobre una fija
+ * liberada), porque el modelo actual no permite calcular disponibilidad
+ * futura de reservas puntuales de forma económica desde el cliente. Una
+ * fecha futura solo refleja quién es el dueño fijo asignado ese día de la
+ * semana y si ese dueño la liberó por rango de fechas; no refleja reservas
+ * puntuales ya tomadas por otros para ese día futuro.
+ */
+export function computeSpotDisplayForDate(
+  spot: ParkingSpot,
+  assignments: FixedSpotAssignment[],
+  releases: FixedSpotRelease[],
+  activeReservationToday: Reservation | null | undefined,
+  currentUserId: string,
+  date: Date = new Date()
+): SpotDisplayInfo {
+  const esHoy = toLocalDateValue(date) === toLocalDateValue(new Date());
+  const esProyeccion = !esHoy;
+
+  // Las reservas puntuales solo se consideran para "hoy" (estado en vivo).
+  const activeReservation = esHoy ? activeReservationToday ?? null : null;
+
+  const owningAssignment =
+    spot.tipo === "fija" ? getOwningAssignmentOnDate(assignments, spot.id, date) : null;
+  const isReleasedOnDate =
+    spot.tipo === "fija" ? isSpotReleasedOnDate(assignments, releases, spot.id, date) : undefined;
+
+  const estado = computeSpotDisplayStatus(spot, activeReservation, isReleasedOnDate);
+  const esReservaPropia = !!activeReservation && activeReservation.user_id === currentUserId;
+  const esDuenioFijo = !!owningAssignment && owningAssignment.user_id === currentUserId;
+  // "Mía" solo cuenta como tal si hay una reserva puntual propia, o si es
+  // mi día fijo Y sigue bloqueado (no lo liberé). Si lo liberé (estado
+  // 'libre') o alguien más la reservó (estado 'ocupada' de un tercero), no
+  // se pinta como propia aunque yo sea el dueño fijo de ese día.
+  const esMia = esReservaPropia || (esDuenioFijo && estado === "bloqueada");
+
+  return {
+    estado,
+    esMia,
+    esReservaPropia,
+    reservaActiva: activeReservation,
+    esProyeccion,
+  };
+}
+
 export const ESTADO_LABEL: Record<EstadoCochera, string> = {
   libre: "Libre",
   ocupada: "Ocupada",
