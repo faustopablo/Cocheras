@@ -3,9 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Menu, X, LogOut, ShieldCheck } from "lucide-react";
+import { Menu, X, LogOut, ShieldCheck, ChevronDown } from "lucide-react";
 import { signOutAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import type { Profile } from "@/lib/database.types";
 
@@ -17,6 +23,7 @@ const NAV_LINKS = [
 
 const ADMIN_LINKS = [
   { href: "/admin/edificios", label: "Edificios" },
+  { href: "/admin/cocheras", label: "Cocheras" },
   { href: "/admin/usuarios", label: "Usuarios" },
   { href: "/admin/reservas", label: "Reservas" },
   { href: "/admin/reglas", label: "Reglas" },
@@ -26,7 +33,9 @@ const ADMIN_LINKS = [
 export function Navbar({ profile }: { profile: Profile }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [adminOpenMobile, setAdminOpenMobile] = useState(false);
   const isAdmin = profile.rol === "admin";
+  const isAdminSection = pathname.startsWith("/admin");
 
   const linkClass = (href: string) =>
     cn(
@@ -54,11 +63,38 @@ export function Navbar({ profile }: { profile: Profile }) {
             ))}
             {isAdmin && (
               <div className="ml-2 flex items-center gap-1 border-l border-white/20 pl-2">
-                {ADMIN_LINKS.map((l) => (
-                  <Link key={l.href} href={l.href} className={linkClass(l.href)}>
-                    {l.label}
-                  </Link>
-                ))}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-ring",
+                        isAdminSection
+                          ? "bg-white/15 text-white"
+                          : "text-white/80 hover:bg-white/10 hover:text-white"
+                      )}
+                    >
+                      <ShieldCheck className="h-4 w-4" />
+                      Administración
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {ADMIN_LINKS.map((l) => (
+                      <DropdownMenuItem key={l.href} asChild>
+                        <Link
+                          href={l.href}
+                          className={cn(
+                            "w-full cursor-pointer",
+                            pathname === l.href && "bg-accent text-accent-foreground"
+                          )}
+                        >
+                          {l.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
           </nav>
@@ -91,11 +127,49 @@ export function Navbar({ profile }: { profile: Profile }) {
       {open && (
         <div className="border-t border-white/10 px-4 pb-4 md:hidden">
           <nav className="flex flex-col gap-1 pt-2">
-            {[...NAV_LINKS, ...(isAdmin ? ADMIN_LINKS : [])].map((l) => (
+            {NAV_LINKS.map((l) => (
               <Link key={l.href} href={l.href} className={linkClass(l.href)} onClick={() => setOpen(false)}>
                 {l.label}
               </Link>
             ))}
+            {isAdmin && (
+              <div className="mt-1 border-t border-white/10 pt-1">
+                <button
+                  type="button"
+                  aria-expanded={adminOpenMobile}
+                  onClick={() => setAdminOpenMobile((v) => !v)}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    isAdminSection
+                      ? "bg-white/15 text-white"
+                      : "text-white/80 hover:bg-white/10 hover:text-white"
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4" />
+                    Administración
+                  </span>
+                  <ChevronDown className={cn("h-4 w-4 transition-transform", adminOpenMobile && "rotate-180")} />
+                </button>
+                {adminOpenMobile && (
+                  <div className="mt-1 flex flex-col gap-1 pl-4">
+                    {ADMIN_LINKS.map((l) => (
+                      <Link
+                        key={l.href}
+                        href={l.href}
+                        className={linkClass(l.href)}
+                        onClick={() => {
+                          setOpen(false);
+                          setAdminOpenMobile(false);
+                        }}
+                      >
+                        {l.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </nav>
           <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
             <div>

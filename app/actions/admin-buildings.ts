@@ -7,6 +7,7 @@ import type { EstadoCochera, TipoCochera } from "@/lib/database.types";
 
 function revalidateAll() {
   revalidatePath("/admin/edificios");
+  revalidatePath("/admin/cocheras");
   revalidatePath("/");
 }
 
