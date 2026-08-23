@@ -62,11 +62,21 @@ export function isSpotReleasedOnDate(
  * `isReleasedToday` solo aplica a cocheras `tipo: 'fija'`: indica si hoy
  * cae dentro de un rango liberado activo para esa cochera.
  */
+/**
+ * Estado visual de una cochera. Extiende `EstadoCochera` (la columna
+ * `estado` de la base, que administra un admin) con `"asignada"`: una
+ * cochera fija con dueño asignado el día visto, que ese dueño no liberó
+ * y sobre la que nadie tiene una reserva activa. Se distingue de
+ * `"ocupada"`, que implica que alguien tiene una reserva activa (o
+ * check-in) en curso sobre la cochera.
+ */
+export type SpotDisplayEstado = EstadoCochera | "asignada";
+
 export function computeSpotDisplayStatus(
   spot: ParkingSpot,
   activeReservation: Reservation | null | undefined,
   isReleasedToday?: boolean
-): EstadoCochera {
+): SpotDisplayEstado {
   if (spot.estado === "fuera_de_servicio") return "fuera_de_servicio";
 
   if (activeReservation) {
@@ -77,7 +87,10 @@ export function computeSpotDisplayStatus(
   }
 
   if (spot.tipo === "fija") {
-    return isReleasedToday ? "libre" : "bloqueada";
+    // Nadie tiene una reserva activa: si no se liberó, está "asignada" a
+    // su dueño de ese día (no "ocupada": eso se reserva para cuando hay
+    // una reserva puntual/check-in en curso).
+    return isReleasedToday ? "libre" : "asignada";
   }
 
   return spot.estado;
@@ -85,7 +98,7 @@ export function computeSpotDisplayStatus(
 
 /** Resultado de proyectar el estado visual de una cochera para una fecha dada. */
 export interface SpotDisplayInfo {
-  estado: EstadoCochera;
+  estado: SpotDisplayEstado;
   /** true si la cochera es "mía": la reserva activa es mía, o (si es fija)
    * el dueño asignado ese día de la semana soy yo, esté liberada o no. */
   esMia: boolean;
@@ -135,10 +148,10 @@ export function computeSpotDisplayForDate(
   const esReservaPropia = !!activeReservation && activeReservation.user_id === currentUserId;
   const esDuenioFijo = !!owningAssignment && owningAssignment.user_id === currentUserId;
   // "Mía" solo cuenta como tal si hay una reserva puntual propia, o si es
-  // mi día fijo Y sigue bloqueado (no lo liberé). Si lo liberé (estado
+  // mi día fijo Y sigue asignada (no lo liberé). Si lo liberé (estado
   // 'libre') o alguien más la reservó (estado 'ocupada' de un tercero), no
   // se pinta como propia aunque yo sea el dueño fijo de ese día.
-  const esMia = esReservaPropia || (esDuenioFijo && estado === "bloqueada");
+  const esMia = esReservaPropia || (esDuenioFijo && estado === "asignada");
 
   return {
     estado,
@@ -149,19 +162,21 @@ export function computeSpotDisplayForDate(
   };
 }
 
-export const ESTADO_LABEL: Record<EstadoCochera, string> = {
+export const ESTADO_LABEL: Record<SpotDisplayEstado, string> = {
   libre: "Libre",
   ocupada: "Ocupada",
+  asignada: "Asignada",
   bloqueada: "Bloqueada",
   fuera_de_servicio: "Fuera de servicio",
 };
 
 export const ESTADO_BADGE_VARIANT: Record<
-  EstadoCochera,
+  SpotDisplayEstado,
   "success" | "destructive" | "warning" | "muted"
 > = {
   libre: "success",
   ocupada: "destructive",
+  asignada: "warning",
   bloqueada: "warning",
   fuera_de_servicio: "muted",
 };

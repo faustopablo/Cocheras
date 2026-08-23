@@ -498,6 +498,30 @@ function BoardToolbar({
           </Button>
         </div>
       </div>
+
+      <EstadosLeyenda />
+    </div>
+  );
+}
+
+/** Leyenda de colores/estados que se ven en el tablero de cocheras. */
+function EstadosLeyenda() {
+  const items: { label: string; className: string }[] = [
+    { label: "Libre", className: "border-2 border-comafi-verde-claro bg-white" },
+    { label: "Tu día / tu reserva", className: "bg-comafi-verde-claro" },
+    { label: "Asignada (fija, no liberada)", className: "bg-comafi-verde-oscuro" },
+    { label: "Ocupada (reserva activa)", className: "bg-comafi-negro-verdoso" },
+    { label: "Fuera de servicio", className: "border-2 border-border bg-muted" },
+  ];
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border pt-2">
+      {items.map((item) => (
+        <span key={item.label} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span className={cn("h-3 w-3 shrink-0 rounded-full", item.className)} aria-hidden />
+          {item.label}
+        </span>
+      ))}
     </div>
   );
 }

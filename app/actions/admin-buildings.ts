@@ -11,6 +11,41 @@ function revalidateAll() {
   revalidatePath("/");
 }
 
+/**
+ * Traduce un error de Supabase/Postgres a un mensaje claro en español.
+ * Mapea los casos conocidos (migración faltante, RLS, superposición de
+ * días) y, para el resto, devuelve el detalle técnico en lugar de un
+ * mensaje genérico que oculte la causa real.
+ */
+function describeDbError(
+  error: { message: string; code?: string },
+  accion: string
+): string {
+  const msg = error.message ?? "";
+
+  if (msg.includes("ocupa alguno de esos días")) {
+    return "Alguno de esos días ya está asignado a otro colaborador en esta cochera.";
+  }
+
+  if (
+    error.code === "42P01" ||
+    /relation .* does not exist/i.test(msg) ||
+    /schema cache/i.test(msg)
+  ) {
+    return "La base de datos no tiene aplicada la última migración (0004). Corré `npx supabase db push`.";
+  }
+
+  if (
+    error.code === "42501" ||
+    /permission denied/i.test(msg) ||
+    /row-level security/i.test(msg)
+  ) {
+    return "No tenés permisos de administrador para asignar cocheras.";
+  }
+
+  return `No se pudo ${accion}: ${msg}`;
+}
+
 export async function createBuildingAction(input: {
   nombre: string;
   direccion: string;
@@ -20,7 +55,7 @@ export async function createBuildingAction(input: {
     nombre: input.nombre.trim(),
     direccion: input.direccion.trim() || null,
   });
-  if (error) return { ok: false, error: "No se pudo crear el edificio." };
+  if (error) return { ok: false, error: describeDbError(error, "crear el edificio") };
   revalidateAll();
   return { ok: true };
 }
@@ -36,7 +71,7 @@ export async function updateBuildingAction(input: {
     .from("buildings")
     .update({ nombre: input.nombre.trim(), direccion: input.direccion.trim() || null, activo: input.activo })
     .eq("id", input.id);
-  if (error) return { ok: false, error: "No se pudo actualizar el edificio." };
+  if (error) return { ok: false, error: describeDbError(error, "actualizar el edificio") };
   revalidateAll();
   return { ok: true };
 }
@@ -49,7 +84,7 @@ export async function createLevelAction(input: {
   const { error } = await supabase
     .from("levels")
     .insert({ building_id: input.buildingId, nombre: input.nombre.trim() });
-  if (error) return { ok: false, error: "No se pudo crear el subsuelo." };
+  if (error) return { ok: false, error: describeDbError(error, "crear el subsuelo") };
   revalidateAll();
   return { ok: true };
 }
@@ -57,7 +92,7 @@ export async function createLevelAction(input: {
 export async function deleteLevelAction(levelId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.from("levels").delete().eq("id", levelId);
-  if (error) return { ok: false, error: "No se pudo eliminar el subsuelo (puede tener cocheras asociadas)." };
+  if (error) return { ok: false, error: describeDbError(error, "eliminar el subsuelo (puede tener cocheras asociadas)") };
   revalidateAll();
   return { ok: true };
 }
@@ -78,7 +113,7 @@ export async function createSpotAction(input: {
     es_prereservada: input.esPrereservada,
     estado: input.tipo === "fija" ? "bloqueada" : "libre",
   });
-  if (error) return { ok: false, error: "No se pudo crear la cochera (verificá que el código no esté repetido)." };
+  if (error) return { ok: false, error: describeDbError(error, "crear la cochera (verificá que el código no esté repetido)") };
   revalidateAll();
   return { ok: true };
 }
@@ -100,7 +135,7 @@ export async function updateSpotAction(input: {
       estado: input.estado,
     })
     .eq("id", input.id);
-  if (error) return { ok: false, error: "No se pudo actualizar la cochera." };
+  if (error) return { ok: false, error: describeDbError(error, "actualizar la cochera") };
   revalidateAll();
   return { ok: true };
 }
@@ -108,7 +143,7 @@ export async function updateSpotAction(input: {
 export async function deleteSpotAction(spotId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.from("parking_spots").delete().eq("id", spotId);
-  if (error) return { ok: false, error: "No se pudo eliminar la cochera." };
+  if (error) return { ok: false, error: describeDbError(error, "eliminar la cochera") };
   revalidateAll();
   return { ok: true };
 }
@@ -125,12 +160,7 @@ export async function createFixedSpotAssignmentAction(input: {
     dias: input.dias,
   });
   if (error) {
-    return {
-      ok: false,
-      error: error.message.includes("ocupa alguno de esos días")
-        ? "Alguno de esos días ya está asignado a otro colaborador en esta cochera."
-        : "No se pudo crear la asignación.",
-    };
+    return { ok: false, error: describeDbError(error, "crear la asignación") };
   }
   revalidateAll();
   return { ok: true };
@@ -147,12 +177,7 @@ export async function updateFixedSpotAssignmentAction(input: {
     .update({ user_id: input.userId, dias: input.dias })
     .eq("id", input.id);
   if (error) {
-    return {
-      ok: false,
-      error: error.message.includes("ocupa alguno de esos días")
-        ? "Alguno de esos días ya está asignado a otro colaborador en esta cochera."
-        : "No se pudo actualizar la asignación.",
-    };
+    return { ok: false, error: describeDbError(error, "actualizar la asignación") };
   }
   revalidateAll();
   return { ok: true };
@@ -161,7 +186,7 @@ export async function updateFixedSpotAssignmentAction(input: {
 export async function deleteFixedSpotAssignmentAction(assignmentId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.from("fixed_spot_assignments").delete().eq("id", assignmentId);
-  if (error) return { ok: false, error: "No se pudo eliminar la asignación." };
+  if (error) return { ok: false, error: describeDbError(error, "eliminar la asignación") };
   revalidateAll();
   return { ok: true };
 }

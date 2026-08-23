@@ -27,10 +27,13 @@ export function SpotCard({
   const { estado, esMia, esReservaPropia, reservaActiva } = display;
 
   const fueraDeServicio = estado === "fuera_de_servicio";
-  // "Ocupada"/"bloqueada" ajena: alguien más la tiene hoy (reserva puntual
-  // activa, o es su día fijo y no la liberó). Si es mía, se pinta como propia.
-  const ocupadaPorOtro = !esMia && (estado === "ocupada" || estado === "bloqueada");
-  const reservadaPorOtro = ocupadaPorOtro && estado === "ocupada";
+  // "Ocupada": alguien tiene una reserva puntual activa (o check-in) sobre
+  // la cochera en este momento. "Asignada": es una cochera fija con dueño
+  // asignado el día visto, que no la liberó, y nadie tiene reserva activa.
+  // Ambas son "de otro" cuando no soy yo (si es mía se pinta como propia).
+  const reservadaPorOtro = !esMia && estado === "ocupada";
+  const asignadaAOtro = !esMia && estado === "asignada";
+  const ocupadaPorOtro = reservadaPorOtro || asignadaAOtro;
   const libre = estado === "libre" && !esMia;
   const puedeReservar = estado === "libre" && !esMia;
 
@@ -48,7 +51,7 @@ export function SpotCard({
       );
       return;
     }
-    if (ocupadaPorOtro) {
+    if (asignadaAOtro) {
       alert(
         `Cochera ${spot.codigo}: es una cochera fija asignada a otro colaborador este día y no fue liberada.`
       );
@@ -71,10 +74,12 @@ export function SpotCard({
         libre && "border-comafi-verde-claro bg-white",
         // Mía (reserva puntual propia, o mi día fijo no liberado).
         esMia && "border-comafi-verde-claro bg-comafi-verde-claro shadow-sm",
-        // Reservada por otro: blanco con borde verde oscuro + badge.
-        reservadaPorOtro && "border-comafi-verde-oscuro bg-white",
-        // Ocupada / bloqueada por el dueño fijo, sin liberar: relleno oscuro.
-        ocupadaPorOtro && !reservadaPorOtro && "border-comafi-verde-oscuro bg-comafi-verde-oscuro",
+        // Asignada a otro: cochera fija con dueño ese día, no liberada,
+        // sin reserva activa. Relleno verde oscuro Comafi + badge.
+        asignadaAOtro && "border-comafi-verde-oscuro bg-comafi-verde-oscuro",
+        // Ocupada por otro: alguien tiene una reserva activa ahora mismo.
+        // Relleno más oscuro (negro verdoso) para diferenciarla de "asignada".
+        reservadaPorOtro && "border-comafi-negro-verdoso bg-comafi-negro-verdoso",
         // Fuera de servicio: gris neutro y atenuado.
         fueraDeServicio && "border-border bg-muted opacity-70"
       )}
@@ -90,9 +95,14 @@ export function SpotCard({
         </span>
       )}
 
+      {asignadaAOtro && (
+        <span className="absolute left-1.5 top-1.5 rounded-full bg-white/20 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white">
+          Asignada
+        </span>
+      )}
       {reservadaPorOtro && (
-        <span className="absolute left-1.5 top-1.5 rounded-full bg-comafi-verde-oscuro px-1.5 py-0.5 text-[9px] font-bold text-white">
-          RES
+        <span className="absolute left-1.5 top-1.5 rounded-full bg-white/20 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white">
+          Ocupada
         </span>
       )}
 
@@ -103,9 +113,7 @@ export function SpotCard({
           className={cn(
             "h-4 w-4",
             libre && "text-comafi-verde-claro",
-            esMia && "text-white",
-            (reservadaPorOtro || (ocupadaPorOtro && !reservadaPorOtro)) &&
-              (reservadaPorOtro ? "text-comafi-verde-oscuro" : "text-white")
+            (esMia || ocupadaPorOtro) && "text-white"
           )}
           aria-hidden
         />
@@ -115,9 +123,7 @@ export function SpotCard({
         className={cn(
           "text-lg font-extrabold leading-tight sm:text-xl",
           libre && "text-comafi-verde-claro",
-          esMia && "text-white",
-          reservadaPorOtro && "text-comafi-verde-oscuro",
-          ocupadaPorOtro && !reservadaPorOtro && "text-white",
+          (esMia || ocupadaPorOtro) && "text-white",
           fueraDeServicio && "text-muted-foreground line-through"
         )}
       >
