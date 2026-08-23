@@ -33,6 +33,7 @@ import {
   deleteFixedSpotAssignmentAction,
 } from "@/app/actions/admin-buildings";
 import { DIAS_SEMANA, cn, formatDias } from "@/lib/utils";
+import { ESTADO_BADGE_VARIANT, ESTADO_LABEL } from "@/lib/spot-status";
 import type {
   Building,
   EstadoCochera,
@@ -44,6 +45,14 @@ import type {
 } from "@/lib/database.types";
 
 const ESTADOS: EstadoCochera[] = ["libre", "ocupada", "bloqueada", "fuera_de_servicio"];
+// Para cocheras fijas la columna `estado` solo tiene sentido como override
+// manual de "fuera de servicio": la disponibilidad real (libre/asignada/
+// ocupada) se calcula sola a partir de las asignaciones y liberaciones (ver
+// lib/spot-status.ts). "ocupada" y "bloqueada" son estados que no aplican a
+// mano en una fija, así que no se ofrecen en el select para no confundir. Si
+// una fija ya tiene guardado alguno de esos valores (dato viejo), se sigue
+// mostrando la opción para no romper el dato existente.
+const ESTADOS_FIJA: EstadoCochera[] = ["libre", "fuera_de_servicio"];
 const ALL = "all";
 
 export function SpotsManager({
@@ -245,7 +254,28 @@ function SpotRow({
         )}
       </TableCell>
       <TableCell>
-        <Badge variant="outline">{spot.estado}</Badge>
+        {(() => {
+          // El estado crudo de la base (spot.estado) confunde en cocheras
+          // fijas: no refleja si tienen dueño asignado. Se deriva un estado
+          // más claro para el listado, reutilizando las mismas etiquetas y
+          // colores que el mapa (lib/spot-status.ts).
+          if (spot.estado === "fuera_de_servicio") {
+            return (
+              <Badge variant={ESTADO_BADGE_VARIANT.fuera_de_servicio}>
+                {ESTADO_LABEL.fuera_de_servicio}
+              </Badge>
+            );
+          }
+          if (spot.tipo === "fija") {
+            if (assignments.length > 0) {
+              return (
+                <Badge variant={ESTADO_BADGE_VARIANT.asignada}>{ESTADO_LABEL.asignada}</Badge>
+              );
+            }
+            return <Badge variant="muted">Sin asignar</Badge>;
+          }
+          return <Badge variant="outline">{spot.estado}</Badge>;
+        })()}
       </TableCell>
       <TableCell className="flex gap-2">
         <SpotFormDialog
@@ -339,9 +369,14 @@ function SpotFormDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ESTADOS.map((e) => (
+                  {(tipo === "fija"
+                    ? ESTADOS_FIJA.includes(estado)
+                      ? ESTADOS_FIJA
+                      : [estado, ...ESTADOS_FIJA]
+                    : ESTADOS
+                  ).map((e) => (
                     <SelectItem key={e} value={e}>
-                      {e}
+                      {ESTADO_LABEL[e]}
                     </SelectItem>
                   ))}
                 </SelectContent>
