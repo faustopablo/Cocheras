@@ -21,6 +21,7 @@ import {
 } from "@/components/admin/stats-charts";
 import type {
   Building,
+  FixedSpotAssignment,
   FixedSpotRelease,
   Level,
   ParkingSpot,
@@ -39,6 +40,7 @@ export default async function AdminEstadisticasPage() {
     { data: spots },
     { data: profiles },
     { data: reservations },
+    { data: assignments },
     { data: releases },
   ] = await Promise.all([
     supabase.from("buildings").select("*"),
@@ -46,6 +48,7 @@ export default async function AdminEstadisticasPage() {
     supabase.from("parking_spots").select("*"),
     supabase.from("profiles").select("*"),
     supabase.from("reservations").select("*"),
+    supabase.from("fixed_spot_assignments").select("*"),
     supabase.from("fixed_spot_releases").select("*").eq("estado", "activa"),
   ]);
 
@@ -54,6 +57,7 @@ export default async function AdminEstadisticasPage() {
   const s = (spots ?? []) as ParkingSpot[];
   const p = (profiles ?? []) as Profile[];
   const r = (reservations ?? []) as Reservation[];
+  const fa = (assignments ?? []) as FixedSpotAssignment[];
   const fr = (releases ?? []) as FixedSpotRelease[];
 
   const ocupacionEdificio = calcOcupacionPorEdificio(b, s, r);
@@ -63,7 +67,7 @@ export default async function AdminEstadisticasPage() {
   const rotacionUsuario = calcRotacionPorUsuario(p, r);
   const ranking = calcRankingCocheras(s, b, r);
   const tasaNoShow = calcTasaNoShow(r);
-  const fijas = calcFijasLiberadasVsBloqueadas(s, fr);
+  const fijas = calcFijasLiberadasVsBloqueadas(s, fa, fr);
 
   return (
     <div className="flex flex-col gap-6">

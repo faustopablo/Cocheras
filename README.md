@@ -62,9 +62,9 @@ supabase db push          # aplica supabase/migrations/*.sql
 ```
 
 O manualmente: pegar el contenido de `supabase/migrations/0001_init.sql`,
-luego `0002_functions_and_cron.sql` y luego `0003_fixed_spot_releases.sql`
-en el SQL Editor del dashboard, en ese orden exacto (cada migración asume
-que las anteriores ya corrieron).
+luego `0002_functions_and_cron.sql`, `0003_fixed_spot_releases.sql` y
+`0004_fixed_spot_assignments.sql` en el SQL Editor del dashboard, en ese
+orden exacto (cada migración asume que las anteriores ya corrieron).
 
 ### 3. Cargar datos de ejemplo (opcional)
 
@@ -169,29 +169,44 @@ Puntos clave:
   recursión en las policies.
 - `reservations` tiene un trigger que impide dos reservas activas
   superpuestas sobre la misma cochera.
-- **Liberación de cochera fija por rango de fechas** (`0003_fixed_spot_releases.sql`):
-  el titular de una cochera fija la libera creando una fila en
-  `fixed_spot_releases` con `fecha_desde`/`fecha_hasta` (ej. vacaciones),
-  vía la función `create_fixed_spot_release` (`security definer`, valida
-  que sea el titular o un admin). Un trigger (`fixed_spot_releases_no_overlap`)
-  impide rangos activos superpuestos para la misma cochera. La función
+- **Liberación de cochera fija por rango de fechas** (`0003_fixed_spot_releases.sql`,
+  ajustada por `0004_fixed_spot_assignments.sql`): el titular de una
+  asignación libera sus días creando una fila en `fixed_spot_releases` con
+  `fecha_desde`/`fecha_hasta` (ej. vacaciones), vía la función
+  `create_fixed_spot_release` (`security definer`, valida que sea el
+  titular de la asignación o un admin). Un trigger
+  (`fixed_spot_releases_no_overlap`) impide rangos activos superpuestos
+  para la misma asignación (dueños distintos de una misma cochera pueden
+  tener rangos superpuestos sin problema, porque cada uno libera solo sus
+  propios días). Cancelar una liberación (`cancel_fixed_spot_release`)
+  **no** cancela las reservas que terceros ya hayan hecho dentro de ese
+  rango.
+- **Cocheras fijas con varios dueños por día de semana**
+  (`0004_fixed_spot_assignments.sql`): reemplaza
+  `parking_spots.assigned_user_id` (un solo dueño, todos los días) por
+  `fixed_spot_assignments` (`spot_id`, `user_id`, `dias smallint[]` con
+  1=lunes..7=domingo). Una cochera fija puede tener varias asignaciones
+  (ej. Juan lunes/miércoles, María martes/jueves); un trigger
+  (`fixed_spot_assignments_no_overlap`) impide que dos asignaciones de la
+  misma cochera se superpongan en algún día. Los días de la semana sin
+  asignación quedan reservables para cualquier colaborador, como si la
+  cochera fuera libre esos días. La función
   `is_fixed_spot_released(spot_id, desde, hasta)` (y la vista
-  `fixed_spots_release_status` para el estado de "hoy") determinan si una
-  cochera fija está disponible para que la reserve un tercero (origen
-  `fija_liberada`) en un rango dado; el trigger de reservas superpuestas
-  sigue aplicando igual que para cualquier otra cochera. Cancelar una
-  liberación (`cancel_fixed_spot_release`) **no** cancela las reservas que
-  terceros ya hayan hecho dentro de ese rango. Este modelo reemplaza al
-  toggle inmediato anterior (`release_fixed_spot` / `reclaim_fixed_spot`
-  sobre `parking_spots.estado`), que la migración `0003` elimina.
+  `fixed_spots_release_status` para el estado de "hoy", con el dueño de
+  hoy en `dueno_hoy`) determinan si una cochera fija está disponible para
+  que la reserve un tercero (origen `fija_liberada`) en un rango dado,
+  revisando día por día si no tiene dueño asignado o si el dueño
+  correspondiente la liberó para esa fecha puntual; el trigger de reservas
+  superpuestas sigue aplicando igual que para cualquier otra cochera.
 
 ## Limitaciones conocidas del MVP
 
 - No hay integración real de envío de emails (ver stub arriba) ni de Azure
   AD/SSO — login es email/password de Supabase Auth únicamente.
 - El estado "en vivo" de una cochera combina la columna `estado` con las
-  reservas activas vigentes y, para cocheras fijas, con si hoy cae dentro
-  de una liberación activa (ver `lib/spot-status.ts` y
+  reservas activas vigentes y, para cocheras fijas, con si el día de la
+  semana de hoy tiene dueño asignado y, si lo tiene, si ese dueño liberó
+  hoy (ver `lib/spot-status.ts`, `fixed_spot_assignments` y
   `fixed_spot_releases`) en el momento de la consulta; no hay un job que
   actualice estados al iniciar/finalizar una reserva o liberación
   programada, ya que el cálculo en lectura lo hace innecesario para este

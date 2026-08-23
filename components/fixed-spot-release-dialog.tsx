@@ -15,9 +15,17 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { createFixedSpotReleaseAction } from "@/app/actions/reservations";
-import { toLocalDateValue } from "@/lib/utils";
+import { formatDias, toLocalDateValue } from "@/lib/utils";
 
-export function FixedSpotReleaseDialog({ spotId, codigo }: { spotId: string; codigo: string }) {
+export function FixedSpotReleaseDialog({
+  assignmentId,
+  codigo,
+  dias,
+}: {
+  assignmentId: string;
+  codigo: string;
+  dias: number[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const today = toLocalDateValue(new Date());
@@ -42,7 +50,7 @@ export function FixedSpotReleaseDialog({ spotId, codigo }: { spotId: string; cod
 
     setLoading(true);
     const result = await createFixedSpotReleaseAction({
-      spotId,
+      assignmentId,
       fechaDesde: desde,
       fechaHasta: hasta,
       motivo,
@@ -70,8 +78,9 @@ export function FixedSpotReleaseDialog({ spotId, codigo }: { spotId: string; cod
         <DialogHeader>
           <DialogTitle>Liberar cochera {codigo}</DialogTitle>
           <DialogDescription>
-            Elegí el rango de fechas en el que no la vas a usar (ej. vacaciones) para que otro
-            colaborador pueda reservarla en ese período.
+            Tus días asignados son {formatDias(dias)}. Elegí el rango de fechas en el que no la
+            vas a usar (ej. vacaciones) para que otro colaborador pueda reservarla esos días en
+            ese período.
           </DialogDescription>
         </DialogHeader>
 

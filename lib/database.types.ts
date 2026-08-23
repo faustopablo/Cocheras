@@ -46,8 +46,18 @@ export interface ParkingSpot {
   codigo: string;
   tipo: TipoCochera;
   es_prereservada: boolean;
-  assigned_user_id: string | null;
   estado: EstadoCochera;
+}
+
+/** 1=lunes ... 7=domingo (ISO). */
+export type DiaSemanaIso = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+export interface FixedSpotAssignment {
+  id: string;
+  spot_id: string;
+  user_id: string;
+  dias: DiaSemanaIso[];
+  created_at: string;
 }
 
 export interface Reservation {
@@ -69,6 +79,7 @@ export interface FixedSpotRelease {
   id: string;
   spot_id: string;
   user_id: string;
+  assignment_id: string;
   fecha_desde: string;
   fecha_hasta: string;
   motivo: string | null;
@@ -105,7 +116,7 @@ export interface AppNotification {
 export interface SpotWithRelations extends ParkingSpot {
   building?: Building;
   level?: Level;
-  assigned_user?: Profile | null;
+  assignments?: FixedSpotAssignment[];
   active_reservation?: Reservation | null;
 }
 

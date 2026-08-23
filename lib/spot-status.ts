@@ -1,20 +1,49 @@
-import type { EstadoCochera, FixedSpotRelease, ParkingSpot, Reservation } from "@/lib/database.types";
-import { toLocalDateValue } from "@/lib/utils";
+import type {
+  EstadoCochera,
+  FixedSpotAssignment,
+  FixedSpotRelease,
+  ParkingSpot,
+  Reservation,
+} from "@/lib/database.types";
+import { isoWeekday, toLocalDateValue } from "@/lib/utils";
 
 /**
- * true si, dentro de las liberaciones activas provistas, hay alguna para
- * `spotId` cuyo rango [fecha_desde, fecha_hasta] cubre `date` (hoy por
- * defecto). Pensado para listas ya filtradas por `estado = 'activa'`.
+ * Asignación (si existe) que es dueña de `spotId` para el día de la
+ * semana de `date` (hoy por defecto). `null` si ese día de la semana no
+ * tiene dueño asignado, en cuyo caso la cochera queda reservable para
+ * cualquiera.
+ */
+export function getOwningAssignmentOnDate(
+  assignments: FixedSpotAssignment[],
+  spotId: string,
+  date: Date = new Date()
+): FixedSpotAssignment | null {
+  const dow = isoWeekday(date);
+  return (
+    assignments.find((a) => a.spot_id === spotId && a.dias.includes(dow)) ?? null
+  );
+}
+
+/**
+ * true si, para el día de la semana de `date` (hoy por defecto), la
+ * cochera `spotId` está disponible para que la reserve un tercero: no
+ * tiene dueño asignado ese día, o el dueño de ese día la liberó
+ * mediante una liberación activa que cubre `date`. Pensado para listas
+ * ya filtradas por `estado = 'activa'`.
  */
 export function isSpotReleasedOnDate(
+  assignments: FixedSpotAssignment[],
   releases: FixedSpotRelease[],
   spotId: string,
   date: Date = new Date()
 ): boolean {
+  const asignacion = getOwningAssignmentOnDate(assignments, spotId, date);
+  if (!asignacion) return true;
+
   const target = toLocalDateValue(date);
   return releases.some(
     (r) =>
-      r.spot_id === spotId &&
+      r.assignment_id === asignacion.id &&
       r.estado === "activa" &&
       r.fecha_desde <= target &&
       r.fecha_hasta >= target

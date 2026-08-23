@@ -88,8 +88,13 @@ on conflict (id) do nothing;
 --   carlos.diaz@comafi.com.ar    (rol colaborador, jerarquia colaborador)
 -- ---------------------------------------------------------------------
 
--- Si ya creaste esos usuarios en Auth, podés asignarles cocheras fijas
--- así (reemplazá los UUID por los reales de cada usuario en profiles):
+-- Si ya creaste esos usuarios en Auth, podés asignarles cocheras fijas así
+-- (reemplazá los UUID por los reales de cada usuario en profiles). Cada
+-- asignación es un usuario + un conjunto de días de la semana (1=lunes
+-- .. 7=domingo); los días sin asignación quedan libres para cualquiera:
 --
--- update public.parking_spots set assigned_user_id = '<uuid-maria>' where id = 'c0000001-0000-0000-0000-000000000001';
--- update public.parking_spots set assigned_user_id = '<uuid-juan>'  where id = 'c0000001-0000-0000-0000-000000000002';
+-- insert into public.fixed_spot_assignments (spot_id, user_id, dias) values
+--   ('c0000001-0000-0000-0000-000000000001', '<uuid-maria>', array[1,2,3,4,5,6,7]);
+-- insert into public.fixed_spot_assignments (spot_id, user_id, dias) values
+--   ('c0000001-0000-0000-0000-000000000002', '<uuid-juan>', array[1,3]),
+--   ('c0000001-0000-0000-0000-000000000002', '<uuid-lucia>', array[2,4]);

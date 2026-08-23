@@ -28,8 +28,20 @@ import {
   createSpotAction,
   updateSpotAction,
   deleteSpotAction,
+  createFixedSpotAssignmentAction,
+  updateFixedSpotAssignmentAction,
+  deleteFixedSpotAssignmentAction,
 } from "@/app/actions/admin-buildings";
-import type { Building, EstadoCochera, Level, ParkingSpot, Profile, TipoCochera } from "@/lib/database.types";
+import { DIAS_SEMANA, cn, formatDias } from "@/lib/utils";
+import type {
+  Building,
+  EstadoCochera,
+  FixedSpotAssignment,
+  Level,
+  ParkingSpot,
+  Profile,
+  TipoCochera,
+} from "@/lib/database.types";
 
 const ESTADOS: EstadoCochera[] = ["libre", "ocupada", "bloqueada", "fuera_de_servicio"];
 const ALL = "all";
@@ -39,11 +51,13 @@ export function SpotsManager({
   levels,
   spots,
   profiles,
+  assignments,
 }: {
   buildings: Building[];
   levels: Level[];
   spots: ParkingSpot[];
   profiles: Profile[];
+  assignments: FixedSpotAssignment[];
 }) {
   const searchParams = useSearchParams();
   const [buildingFilter, setBuildingFilter] = useState<string>(
@@ -65,6 +79,16 @@ export function SpotsManager({
       }),
     [spots, buildingFilter, levelFilter]
   );
+
+  const assignmentsBySpot = useMemo(() => {
+    const map = new Map<string, FixedSpotAssignment[]>();
+    for (const a of assignments) {
+      const arr = map.get(a.spot_id) ?? [];
+      arr.push(a);
+      map.set(a.spot_id, arr);
+    }
+    return map;
+  }, [assignments]);
 
   const selectedBuilding = buildings.find((b) => b.id === buildingFilter);
   const selectedLevel = levels.find((l) => l.id === levelFilter && l.building_id === buildingFilter);
@@ -116,7 +140,7 @@ export function SpotsManager({
               </Select>
             </div>
             {selectedBuilding && selectedLevel && (
-              <SpotFormDialog building={selectedBuilding} level={selectedLevel} profiles={profiles} />
+              <SpotFormDialog building={selectedBuilding} level={selectedLevel} />
             )}
           </div>
           {(!selectedBuilding || !selectedLevel) && (
@@ -143,7 +167,7 @@ export function SpotsManager({
                   <TableHead>Subsuelo</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Prereservada</TableHead>
-                  <TableHead>Asignada a</TableHead>
+                  <TableHead>Asignaciones</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead />
                 </TableRow>
@@ -160,6 +184,7 @@ export function SpotsManager({
                       building={building}
                       level={level}
                       profiles={profiles}
+                      assignments={assignmentsBySpot.get(spot.id) ?? []}
                     />
                   );
                 })}
@@ -177,14 +202,16 @@ function SpotRow({
   building,
   level,
   profiles,
+  assignments,
 }: {
   spot: ParkingSpot;
   building: Building;
   level: Level;
   profiles: Profile[];
+  assignments: FixedSpotAssignment[];
 }) {
   const router = useRouter();
-  const asignado = profiles.find((p) => p.id === spot.assigned_user_id);
+  const profileById = useMemo(() => new Map(profiles.map((p) => [p.id, p])), [profiles]);
 
   async function handleDelete() {
     if (!confirm(`¿Eliminar la cochera ${spot.codigo}?`)) return;
@@ -200,12 +227,34 @@ function SpotRow({
       <TableCell>{level.nombre}</TableCell>
       <TableCell>{spot.tipo === "fija" ? "Fija" : "Libre"}</TableCell>
       <TableCell>{spot.es_prereservada ? "Sí" : "No"}</TableCell>
-      <TableCell>{asignado?.nombre ?? "-"}</TableCell>
+      <TableCell>
+        {spot.tipo !== "fija" ? (
+          "-"
+        ) : assignments.length === 0 ? (
+          <span className="text-muted-foreground">Sin asignar (libre todos los días)</span>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {assignments.map((a) => (
+              <span key={a.id} className="text-xs">
+                <span className="font-medium">{profileById.get(a.user_id)?.nombre ?? "Desconocido"}</span>
+                {" · "}
+                {formatDias(a.dias)}
+              </span>
+            ))}
+          </div>
+        )}
+      </TableCell>
       <TableCell>
         <Badge variant="outline">{spot.estado}</Badge>
       </TableCell>
       <TableCell className="flex gap-2">
-        <SpotFormDialog building={building} level={level} profiles={profiles} spot={spot} />
+        <SpotFormDialog
+          building={building}
+          level={level}
+          spot={spot}
+          profiles={profiles}
+          assignments={assignments}
+        />
         <Button size="sm" variant="ghost" onClick={handleDelete}>
           Eliminar
         </Button>
@@ -217,20 +266,21 @@ function SpotRow({
 function SpotFormDialog({
   building,
   level,
-  profiles,
   spot,
+  profiles,
+  assignments,
 }: {
   building: Building;
   level: Level;
-  profiles: Profile[];
   spot?: ParkingSpot;
+  profiles?: Profile[];
+  assignments?: FixedSpotAssignment[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [codigo, setCodigo] = useState(spot?.codigo ?? "");
   const [tipo, setTipo] = useState<TipoCochera>(spot?.tipo ?? "libre");
   const [esPrereservada, setEsPrereservada] = useState(spot?.es_prereservada ?? false);
-  const [assignedUserId, setAssignedUserId] = useState<string>(spot?.assigned_user_id ?? "none");
   const [estado, setEstado] = useState<EstadoCochera>(spot?.estado ?? "libre");
   const [saving, setSaving] = useState(false);
 
@@ -239,26 +289,12 @@ function SpotFormDialog({
     setSaving(true);
 
     const result = spot
-      ? await updateSpotAction({
-          id: spot.id,
-          codigo,
-          tipo,
-          esPrereservada,
-          assignedUserId: assignedUserId === "none" ? null : assignedUserId,
-          estado,
-        })
-      : await createSpotAction({
-          buildingId: building.id,
-          levelId: level.id,
-          codigo,
-          tipo,
-          esPrereservada,
-          assignedUserId: assignedUserId === "none" ? null : assignedUserId,
-        });
+      ? await updateSpotAction({ id: spot.id, codigo, tipo, esPrereservada, estado })
+      : await createSpotAction({ buildingId: building.id, levelId: level.id, codigo, tipo, esPrereservada });
 
     setSaving(false);
     if (result.ok) {
-      setOpen(false);
+      if (!spot) setOpen(false);
       router.refresh();
     } else {
       alert(result.error);
@@ -295,24 +331,6 @@ function SpotFormDialog({
               </SelectContent>
             </Select>
           </div>
-          {tipo === "fija" && (
-            <div>
-              <Label>Asignada a</Label>
-              <Select value={assignedUserId} onValueChange={setAssignedUserId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sin asignar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin asignar</SelectItem>
-                  {profiles.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.nombre} ({p.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
           {spot && (
             <div>
               <Label>Estado</Label>
@@ -331,8 +349,9 @@ function SpotFormDialog({
               {tipo === "fija" && (
                 <p className="mt-1 text-xs text-muted-foreground">
                   En cocheras fijas este campo solo importa para marcarla &quot;fuera de servicio&quot;.
-                  La disponibilidad para que otros la reserven se gestiona con liberaciones por
-                  rango de fechas (el titular las crea desde &quot;Mi cochera fija&quot;).
+                  La disponibilidad para que otros la reserven se calcula sola: los días de la
+                  semana sin dueño asignado quedan libres, y los días con dueño se liberan cuando
+                  el titular crea una liberación por rango de fechas desde &quot;Mi cochera fija&quot;.
                 </p>
               )}
             </div>
@@ -347,7 +366,270 @@ function SpotFormDialog({
             </Button>
           </DialogFooter>
         </form>
+
+        {spot && tipo === "fija" && profiles && (
+          <FixedSpotAssignmentsManager
+            spotId={spot.id}
+            profiles={profiles}
+            assignments={assignments ?? []}
+          />
+        )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function FixedSpotAssignmentsManager({
+  spotId,
+  profiles,
+  assignments,
+}: {
+  spotId: string;
+  profiles: Profile[];
+  assignments: FixedSpotAssignment[];
+}) {
+  const router = useRouter();
+  const profileById = useMemo(() => new Map(profiles.map((p) => [p.id, p])), [profiles]);
+
+  const diasOcupados = useMemo(() => new Set(assignments.flatMap((a) => a.dias)), [assignments]);
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-border pt-4">
+      <p className="text-sm font-semibold text-foreground">Asignaciones por día</p>
+      <p className="text-xs text-muted-foreground">
+        Los días de la semana que no tengan ningún colaborador asignado quedan disponibles para
+        que cualquiera los reserve.
+      </p>
+
+      {assignments.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Todavía no hay ninguna asignación.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {assignments.map((a) => (
+            <AssignmentRow
+              key={a.id}
+              assignment={a}
+              nombre={profileById.get(a.user_id)?.nombre ?? "Desconocido"}
+              diasOcupadosPorOtros={new Set(
+                assignments.filter((o) => o.id !== a.id).flatMap((o) => o.dias)
+              )}
+              onSaved={() => router.refresh()}
+            />
+          ))}
+        </div>
+      )}
+
+      <NewAssignmentForm
+        spotId={spotId}
+        profiles={profiles}
+        diasOcupados={diasOcupados}
+        onSaved={() => router.refresh()}
+      />
+    </div>
+  );
+}
+
+function AssignmentRow({
+  assignment,
+  nombre,
+  diasOcupadosPorOtros,
+  onSaved,
+}: {
+  assignment: FixedSpotAssignment;
+  nombre: string;
+  diasOcupadosPorOtros: Set<number>;
+  onSaved: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [dias, setDias] = useState<number[]>(assignment.dias);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleGuardar() {
+    setSaving(true);
+    setError(null);
+    const res = await updateFixedSpotAssignmentAction({
+      id: assignment.id,
+      userId: assignment.user_id,
+      dias,
+    });
+    setSaving(false);
+    if (!res.ok) {
+      setError(res.error ?? "No se pudo guardar.");
+      return;
+    }
+    setEditing(false);
+    onSaved();
+  }
+
+  async function handleEliminar() {
+    if (!confirm(`¿Quitar la asignación de ${nombre}?`)) return;
+    setSaving(true);
+    const res = await deleteFixedSpotAssignmentAction(assignment.id);
+    setSaving(false);
+    if (res.ok) onSaved();
+    else alert(res.error);
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-border bg-muted p-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm font-medium">{nombre}</span>
+        <div className="flex gap-2">
+          {editing ? (
+            <>
+              <Button size="sm" variant="outline" onClick={() => { setEditing(false); setDias(assignment.dias); setError(null); }} disabled={saving}>
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={handleGuardar} disabled={saving}>
+                Guardar
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                Editar días
+              </Button>
+              <Button size="sm" variant="ghost" onClick={handleEliminar} disabled={saving}>
+                Quitar
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+      {editing ? (
+        <DiasChipsSelector value={dias} onChange={setDias} deshabilitados={diasOcupadosPorOtros} />
+      ) : (
+        <span className="text-xs text-muted-foreground">{formatDias(assignment.dias)}</span>
+      )}
+      {error && (
+        <p role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function NewAssignmentForm({
+  spotId,
+  profiles,
+  diasOcupados,
+  onSaved,
+}: {
+  spotId: string;
+  profiles: Profile[];
+  diasOcupados: Set<number>;
+  onSaved: () => void;
+}) {
+  const [userId, setUserId] = useState<string>("");
+  const [dias, setDias] = useState<number[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const diasDisponibles = DIAS_SEMANA.filter((d) => !diasOcupados.has(d.value));
+
+  async function handleAgregar() {
+    setError(null);
+    if (!userId) {
+      setError("Elegí un colaborador.");
+      return;
+    }
+    if (dias.length === 0) {
+      setError("Elegí al menos un día.");
+      return;
+    }
+    setSaving(true);
+    const res = await createFixedSpotAssignmentAction({ spotId, userId, dias });
+    setSaving(false);
+    if (!res.ok) {
+      setError(res.error ?? "No se pudo crear la asignación.");
+      return;
+    }
+    setUserId("");
+    setDias([]);
+    onSaved();
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-dashed border-border p-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Agregar asignación
+      </p>
+      <Select value={userId || undefined} onValueChange={setUserId}>
+        <SelectTrigger>
+          <SelectValue placeholder="Elegí un colaborador" />
+        </SelectTrigger>
+        <SelectContent>
+          {profiles.map((p) => (
+            <SelectItem key={p.id} value={p.id}>
+              {p.nombre} ({p.email})
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {diasDisponibles.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Todos los días de la semana ya tienen un dueño asignado.
+        </p>
+      ) : (
+        <DiasChipsSelector value={dias} onChange={setDias} deshabilitados={diasOcupados} />
+      )}
+      {error && (
+        <p role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      )}
+      <Button
+        type="button"
+        size="sm"
+        onClick={handleAgregar}
+        disabled={saving || diasDisponibles.length === 0}
+      >
+        {saving ? "Guardando..." : "Agregar"}
+      </Button>
+    </div>
+  );
+}
+
+function DiasChipsSelector({
+  value,
+  onChange,
+  deshabilitados,
+}: {
+  value: number[];
+  onChange: (dias: number[]) => void;
+  deshabilitados: Set<number>;
+}) {
+  function toggle(dia: number) {
+    if (deshabilitados.has(dia)) return;
+    onChange(value.includes(dia) ? value.filter((d) => d !== dia) : [...value, dia].sort());
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {DIAS_SEMANA.map((d) => {
+        const seleccionado = value.includes(d.value);
+        const ocupado = deshabilitados.has(d.value);
+        return (
+          <button
+            key={d.value}
+            type="button"
+            title={ocupado ? `${d.label} ya asignado a otro colaborador` : d.label}
+            disabled={ocupado}
+            onClick={() => toggle(d.value)}
+            className={cn(
+              "h-8 w-8 rounded-full border text-xs font-semibold transition-colors",
+              seleccionado
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-card text-foreground hover:bg-muted",
+              ocupado && !seleccionado && "cursor-not-allowed opacity-40"
+            )}
+          >
+            {d.corta}
+          </button>
+        );
+      })}
+    </div>
   );
 }

@@ -75,18 +75,17 @@ export async function createReservationAction(input: {
   if (spot.tipo === "fija") {
     const inicioFecha = inicio.toISOString().slice(0, 10);
     const finFecha = fin.toISOString().slice(0, 10);
-    const { count: liberacionesQueCubren } = await supabase
-      .from("fixed_spot_releases")
-      .select("id", { count: "exact", head: true })
-      .eq("spot_id", spot.id)
-      .eq("estado", "activa")
-      .lte("fecha_desde", inicioFecha)
-      .gte("fecha_hasta", finFecha);
+    // Disponible si, para cada fecha del rango, ese día de la semana no
+    // tiene dueño asignado o el dueño correspondiente la liberó.
+    const { data: disponible, error: disponibleError } = await supabase.rpc(
+      "is_fixed_spot_released",
+      { p_spot_id: spot.id, p_desde: inicioFecha, p_hasta: finFecha }
+    );
 
-    if (!liberacionesQueCubren) {
+    if (disponibleError || !disponible) {
       return {
         ok: false,
-        error: "Esta cochera fija no fue liberada por su titular para esas fechas.",
+        error: "Esta cochera fija tiene dueño en alguno de esos días y no fue liberada para esas fechas.",
       };
     }
   }
@@ -196,14 +195,14 @@ export async function checkOutAction(reservationId: string): Promise<ActionResul
 }
 
 export async function createFixedSpotReleaseAction(input: {
-  spotId: string;
+  assignmentId: string;
   fechaDesde: string;
   fechaHasta: string;
   motivo?: string;
 }): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("create_fixed_spot_release", {
-    p_spot_id: input.spotId,
+    p_assignment_id: input.assignmentId,
     p_fecha_desde: input.fechaDesde,
     p_fecha_hasta: input.fechaHasta,
     p_motivo: input.motivo?.trim() || null,

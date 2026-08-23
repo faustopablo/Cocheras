@@ -1,5 +1,6 @@
 import type {
   Building,
+  FixedSpotAssignment,
   FixedSpotRelease,
   Jerarquia,
   Level,
@@ -187,13 +188,16 @@ export function calcTasaNoShow(reservations: Reservation[]): number {
 
 export function calcFijasLiberadasVsBloqueadas(
   spots: ParkingSpot[],
+  fixedSpotAssignments: FixedSpotAssignment[],
   fixedSpotReleases: FixedSpotRelease[]
 ): FijasLiberadasVsBloqueadas {
-  // "Liberada" = hoy cae dentro de un rango liberado activo (ver
-  // fixed_spot_releases); las fuera de servicio no cuentan como
-  // liberadas aunque tengan una liberación vigente.
+  // "Liberada" = hoy (según el día de la semana) no tiene dueño
+  // asignado, o el dueño de hoy la liberó (ver fixed_spot_releases); las
+  // fuera de servicio no cuentan como liberadas aunque estén disponibles.
   const fijas = spots.filter((s) => s.tipo === "fija" && s.estado !== "fuera_de_servicio");
-  const liberadas = fijas.filter((s) => isSpotReleasedOnDate(fixedSpotReleases, s.id)).length;
+  const liberadas = fijas.filter((s) =>
+    isSpotReleasedOnDate(fixedSpotAssignments, fixedSpotReleases, s.id)
+  ).length;
   return {
     liberadas,
     bloqueadas: fijas.length - liberadas,

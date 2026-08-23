@@ -1,18 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
 import { SpotsManager } from "@/components/admin/spots-manager";
-import type { Building, Level, ParkingSpot, Profile } from "@/lib/database.types";
+import type { Building, FixedSpotAssignment, Level, ParkingSpot, Profile } from "@/lib/database.types";
 
 export const metadata = { title: "Cocheras — Admin Cocheras Comafi" };
 
 export default async function AdminCocherasPage() {
   const supabase = await createClient();
 
-  const [{ data: buildings }, { data: levels }, { data: spots }, { data: profiles }] =
+  const [{ data: buildings }, { data: levels }, { data: spots }, { data: profiles }, { data: assignments }] =
     await Promise.all([
       supabase.from("buildings").select("*").order("nombre"),
       supabase.from("levels").select("*").order("nombre"),
       supabase.from("parking_spots").select("*").order("codigo"),
       supabase.from("profiles").select("*").order("nombre"),
+      supabase.from("fixed_spot_assignments").select("*"),
     ]);
 
   return (
@@ -20,7 +21,8 @@ export default async function AdminCocherasPage() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">Cocheras</h1>
         <p className="text-sm text-muted-foreground">
-          ABM de cocheras. Asigná cocheras fijas a un colaborador y marcá cuáles son prereservadas.
+          ABM de cocheras. En las fijas podés asignar distintos colaboradores a distintos días de
+          la semana; los días sin asignación quedan disponibles para todos.
         </p>
       </div>
       <SpotsManager
@@ -28,6 +30,7 @@ export default async function AdminCocherasPage() {
         levels={(levels ?? []) as Level[]}
         spots={(spots ?? []) as ParkingSpot[]}
         profiles={(profiles ?? []) as Profile[]}
+        assignments={(assignments ?? []) as FixedSpotAssignment[]}
       />
     </div>
   );
