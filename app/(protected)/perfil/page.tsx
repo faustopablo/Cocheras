@@ -1,10 +1,8 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import {
   CocherasFijasSection,
@@ -12,9 +10,9 @@ import {
   type AssignmentWithSpot,
   type ReservationWithSpot,
 } from "@/components/user-profile-sections";
-import type { EstadoReserva, FixedSpotRelease, Jerarquia, Profile, Rol } from "@/lib/database.types";
+import type { EstadoReserva, FixedSpotRelease, Jerarquia, Rol } from "@/lib/database.types";
 
-export const metadata = { title: "Ficha de usuario — Admin Cocheras Comafi" };
+export const metadata = { title: "Mi perfil — Cocheras Comafi" };
 
 const RESERVAS_POR_PAGINA = 20;
 
@@ -29,36 +27,28 @@ const JERARQUIA_LABEL: Record<Jerarquia, string> = {
   colaborador: "Colaborador",
 };
 
-export default async function AdminUsuarioDetallePage({
-  params,
+export default async function MiPerfilPage({
   searchParams,
 }: {
-  params: Promise<{ id: string }>;
   searchParams: Promise<{ limit?: string }>;
 }) {
-  const { id } = await params;
   const { limit: limitParam } = await searchParams;
   const limit = Math.max(RESERVAS_POR_PAGINA, Number(limitParam) || RESERVAS_POR_PAGINA);
 
+  const { profile } = await requireUser();
   const supabase = await createClient();
-
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", id).single();
-
-  if (!profile) {
-    notFound();
-  }
 
   const [{ data: assignments }, { data: reservationEstados }, { data: reservations }] =
     await Promise.all([
       supabase
         .from("fixed_spot_assignments")
         .select("*, spot:parking_spots(*, building:buildings(*), level:levels(*))")
-        .eq("user_id", id),
-      supabase.from("reservations").select("estado").eq("user_id", id),
+        .eq("user_id", profile.id),
+      supabase.from("reservations").select("estado").eq("user_id", profile.id),
       supabase
         .from("reservations")
         .select("*, spot:parking_spots(*, building:buildings(*))")
-        .eq("user_id", id)
+        .eq("user_id", profile.id)
         .order("fecha_inicio", { ascending: false })
         .limit(limit),
     ]);
@@ -93,46 +83,29 @@ export default async function AdminUsuarioDetallePage({
   const reservationsList = (reservations ?? []) as ReservationWithSpot[];
   const hayMasReservas = totalReservas > reservationsList.length;
 
-  const p = profile as Profile;
-
   return (
     <div className="flex flex-col gap-6">
-      <Link
-        href="/admin/usuarios"
-        className="focus-ring inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden />
-        Usuarios
-      </Link>
-
       <Card>
-        <CardHeader className="flex-row items-start justify-between gap-4 space-y-0 sm:items-center">
-          <div>
-            <CardTitle className="text-2xl">{p.nombre}</CardTitle>
-            <CardDescription>{p.email}</CardDescription>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Badge variant={p.rol === "admin" ? "default" : "secondary"}>{ROL_LABEL[p.rol]}</Badge>
-              <Badge variant="outline">{JERARQUIA_LABEL[p.jerarquia]}</Badge>
-              {p.activo ? (
-                <Badge variant="success">Activo</Badge>
-              ) : (
-                <Badge variant="muted">Inactivo</Badge>
-              )}
-              <span className="text-xs text-muted-foreground">
-                Alta: {formatDate(p.created_at)}
-              </span>
-            </div>
+        <CardHeader>
+          <CardTitle className="text-2xl">{profile.nombre}</CardTitle>
+          <CardDescription>{profile.email}</CardDescription>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Badge variant={profile.rol === "admin" ? "default" : "secondary"}>
+              {profile.rol === "admin" && <ShieldCheck className="mr-1 h-3 w-3" />}
+              {ROL_LABEL[profile.rol]}
+            </Badge>
+            <Badge variant="outline">{JERARQUIA_LABEL[profile.jerarquia]}</Badge>
+            <span className="text-xs text-muted-foreground">
+              Alta: {formatDate(profile.created_at)}
+            </span>
           </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin/usuarios">Editar en el listado</Link>
-          </Button>
         </CardHeader>
       </Card>
 
       <CocherasFijasSection
-        titulo="Cocheras fijas asignadas"
-        descripcion="Días de la semana y liberaciones programadas de cada cochera fija a su nombre."
-        mensajeVacio="No tiene cocheras fijas asignadas actualmente."
+        titulo="Mis cocheras fijas"
+        descripcion="Días de la semana y liberaciones programadas de tus cocheras fijas."
+        mensajeVacio="No tenés cocheras fijas asignadas actualmente."
         assignments={assignmentsList}
         releasesByAssignment={releasesByAssignment}
       />
@@ -141,8 +114,8 @@ export default async function AdminUsuarioDetallePage({
         resumen={resumen}
         reservations={reservationsList}
         hayMasReservas={hayMasReservas}
-        verMasHref={`/admin/usuarios/${id}?limit=${limit + RESERVAS_POR_PAGINA}`}
-        mensajeVacio="Todavía no hizo ninguna reserva."
+        verMasHref={`/perfil?limit=${limit + RESERVAS_POR_PAGINA}`}
+        mensajeVacio="Todavía no hiciste ninguna reserva."
       />
     </div>
   );

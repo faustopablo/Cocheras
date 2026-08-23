@@ -65,13 +65,16 @@ export function Navbar({ profile }: { profile: Profile }) {
         </div>
 
         <div className="hidden items-center gap-3 md:flex">
-          <div className="text-right">
+          <Link
+            href="/perfil"
+            className="focus-ring rounded-md px-2 py-1 text-right transition-colors hover:bg-white/10"
+          >
             <p className="text-sm font-medium leading-tight">{profile.nombre}</p>
             <p className="flex items-center justify-end gap-1 text-xs text-white/60">
               {isAdmin && <ShieldCheck className="h-3 w-3" />}
               {isAdmin ? "Administrador" : "Colaborador"}
             </p>
-          </div>
+          </Link>
           <form action={signOutAction}>
             <Button variant="ghost" size="icon" type="submit" title="Cerrar sesión" className="text-white hover:bg-white/10">
               <LogOut className="h-4 w-4" />
@@ -115,10 +118,14 @@ export function Navbar({ profile }: { profile: Profile }) {
             )}
           </nav>
           <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
-            <div>
+            <Link
+              href="/perfil"
+              onClick={() => setOpen(false)}
+              className="focus-ring rounded-md px-1 py-1 transition-colors hover:bg-white/10"
+            >
               <p className="text-sm font-medium">{profile.nombre}</p>
               <p className="text-xs text-white/60">{isAdmin ? "Administrador" : "Colaborador"}</p>
-            </div>
+            </Link>
             <form action={signOutAction}>
               <Button variant="ghost" size="sm" type="submit" className="text-white hover:bg-white/10">
                 <LogOut className="mr-1 h-4 w-4" /> Salir
