@@ -9,6 +9,7 @@ import type {
   Reservation,
 } from "@/lib/database.types";
 import { isSpotReleasedOnDate } from "@/lib/spot-status";
+import { DIAS_SEMANA } from "@/lib/utils";
 
 export interface OcupacionPorEdificio {
   edificio: string;
@@ -23,8 +24,8 @@ export interface OcupacionPorSubsuelo {
   ocupacion: number;
 }
 
-export interface OcupacionPorFranja {
-  franja: string;
+export interface OcupacionPorDiaSemana {
+  dia: string;
   ocupacion: number;
 }
 
@@ -50,14 +51,13 @@ export interface FijasLiberadasVsBloqueadas {
   bloqueadas: number;
 }
 
-const FRANJAS: { label: string; from: number; to: number }[] = [
-  { label: "00-06", from: 0, to: 6 },
-  { label: "06-09", from: 6, to: 9 },
-  { label: "09-12", from: 9, to: 12 },
-  { label: "12-15", from: 12, to: 15 },
-  { label: "15-18", from: 15, to: 18 },
-  { label: "18-24", from: 18, to: 24 },
-];
+/** Día de la semana ISO (1=lunes..7=domingo) de una fecha "yyyy-MM-dd". */
+function isoWeekdayFromFecha(fecha: string): number {
+  const [y, m, d] = fecha.split("-").map(Number);
+  const date = new Date(y, (m ?? 1) - 1, d ?? 1);
+  const js = date.getDay();
+  return js === 0 ? 7 : js;
+}
 
 function reservasValidas(reservations: Reservation[]) {
   return reservations.filter((r) => r.estado === "activa" || r.estado === "completada");
@@ -106,16 +106,13 @@ export function calcOcupacionPorSubsuelo(
   });
 }
 
-export function calcOcupacionPorFranja(reservations: Reservation[]): OcupacionPorFranja[] {
+export function calcOcupacionPorDiaSemana(reservations: Reservation[]): OcupacionPorDiaSemana[] {
   const validas = reservasValidas(reservations);
   const total = validas.length || 1;
 
-  return FRANJAS.map(({ label, from, to }) => {
-    const enFranja = validas.filter((r) => {
-      const hora = new Date(r.fecha_inicio).getHours();
-      return hora >= from && hora < to;
-    });
-    return { franja: label, ocupacion: Math.round((enFranja.length / total) * 100) };
+  return DIAS_SEMANA.map(({ value, label }) => {
+    const enDia = validas.filter((r) => isoWeekdayFromFecha(r.fecha) === value);
+    return { dia: label, ocupacion: Math.round((enDia.length / total) * 100) };
   });
 }
 

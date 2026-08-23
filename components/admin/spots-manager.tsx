@@ -493,6 +493,7 @@ function AssignmentRow({
       setError(res.error ?? "No se pudo guardar.");
       return;
     }
+    if (res.warning) alert(res.warning);
     setEditing(false);
     onSaved();
   }
@@ -581,6 +582,7 @@ function NewAssignmentForm({
       setError(res.error ?? "No se pudo crear la asignación.");
       return;
     }
+    if (res.warning) alert(res.warning);
     setUserId("");
     setDias([]);
     onSaved();

@@ -13,7 +13,7 @@ export default async function ReservasPage() {
     .from("reservations")
     .select("*, spot:parking_spots(*, building:buildings(*), level:levels(*))")
     .eq("user_id", user.id)
-    .order("fecha_inicio", { ascending: false });
+    .order("fecha", { ascending: false });
 
   const reservas = (data ?? []) as ReservationWithRelations[];
   const activas = reservas.filter((r) => r.estado === "activa");

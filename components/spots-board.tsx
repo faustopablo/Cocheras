@@ -24,6 +24,7 @@ import {
   formatDias,
   isSameLocalDate,
   startOfIsoWeek,
+  toLocalDateValue,
 } from "@/lib/utils";
 import type {
   Building,
@@ -65,10 +66,12 @@ export function SpotsBoard({
   const hoy = useMemo(() => new Date(), []);
   const esHoy = isSameLocalDate(selectedDate, hoy);
 
-  const reservationBySpot = useMemo(() => {
+  // Las reservas son diarias: se indexan por cochera + fecha exacta para
+  // poder proyectar cualquier día (no solo hoy) sin aproximaciones.
+  const reservationBySpotAndFecha = useMemo(() => {
     const map = new Map<string, Reservation>();
     for (const r of activeReservations) {
-      if (!map.has(r.spot_id)) map.set(r.spot_id, r);
+      map.set(`${r.spot_id}_${r.fecha}`, r);
     }
     return map;
   }, [activeReservations]);
@@ -122,9 +125,11 @@ export function SpotsBoard({
     return map;
   }, [spots]);
 
-  // Estado/estilo de cada cochera proyectado para `selectedDate`. Ver
-  // límites de la proyección futura en computeSpotDisplayForDate.
+  // Estado/estilo de cada cochera proyectado exactamente para
+  // `selectedDate` (las reservas son diarias, así que la proyección de
+  // reservas puntuales es exacta para cualquier fecha, no solo hoy).
   const displayBySpotId = useMemo(() => {
+    const fechaSeleccionada = toLocalDateValue(selectedDate);
     const map = new Map<string, ReturnType<typeof computeSpotDisplayForDate>>();
     for (const s of spots) {
       map.set(
@@ -133,14 +138,21 @@ export function SpotsBoard({
           s,
           fixedSpotAssignments,
           fixedSpotReleases,
-          reservationBySpot.get(s.id),
+          reservationBySpotAndFecha.get(`${s.id}_${fechaSeleccionada}`),
           currentUserId,
           selectedDate
         )
       );
     }
     return map;
-  }, [spots, fixedSpotAssignments, fixedSpotReleases, reservationBySpot, currentUserId, selectedDate]);
+  }, [
+    spots,
+    fixedSpotAssignments,
+    fixedSpotReleases,
+    reservationBySpotAndFecha,
+    currentUserId,
+    selectedDate,
+  ]);
 
   function isBuildingExpanded(id: string) {
     return expandedBuildings[id] ?? true;
@@ -379,7 +391,13 @@ export function SpotsBoard({
         );
       })}
 
-      <ReservationDialog spot={selectedSpot} open={dialogOpen} onOpenChange={setDialogOpen} />
+      <ReservationDialog
+        key={`${selectedSpot?.id ?? "none"}_${toLocalDateValue(selectedDate)}`}
+        spot={selectedSpot}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        defaultDate={selectedDate}
+      />
     </div>
   );
 }

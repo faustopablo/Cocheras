@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDateTime } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { adminCancelReservationAction, adminReassignReservationAction } from "@/app/actions/admin-reservations";
 import type { EstadoReserva, ParkingSpot, ReservationWithRelations } from "@/lib/database.types";
 
@@ -110,8 +110,7 @@ export function AdminReservationsTable({
               <TableHead>Edificio</TableHead>
               <TableHead>Titular</TableHead>
               <TableHead>Origen</TableHead>
-              <TableHead>Inicio</TableHead>
-              <TableHead>Fin</TableHead>
+              <TableHead>Fecha</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead />
             </TableRow>
@@ -123,8 +122,7 @@ export function AdminReservationsTable({
                 <TableCell>{r.spot?.building?.nombre}</TableCell>
                 <TableCell>{r.user?.nombre ?? r.guest?.nombre ?? "-"}</TableCell>
                 <TableCell>{r.origen}</TableCell>
-                <TableCell>{formatDateTime(r.fecha_inicio)}</TableCell>
-                <TableCell>{formatDateTime(r.fecha_fin)}</TableCell>
+                <TableCell>{formatDate(r.fecha)}</TableCell>
                 <TableCell>
                   <Badge variant={ESTADO_VARIANT[r.estado]}>{r.estado}</Badge>
                 </TableCell>

@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import {
   calcFijasLiberadasVsBloqueadas,
+  calcOcupacionPorDiaSemana,
   calcOcupacionPorEdificio,
-  calcOcupacionPorFranja,
   calcOcupacionPorSubsuelo,
   calcRankingCocheras,
   calcRotacionPorJerarquia,
@@ -12,8 +12,8 @@ import {
 import {
   FijasLiberadasChart,
   NoShowStat,
+  OcupacionPorDiaSemanaChart,
   OcupacionPorEdificioChart,
-  OcupacionPorFranjaChart,
   OcupacionPorSubsueloChart,
   RankingCocherasChart,
   RotacionPorJerarquiaChart,
@@ -62,7 +62,7 @@ export default async function AdminEstadisticasPage() {
 
   const ocupacionEdificio = calcOcupacionPorEdificio(b, s, r);
   const ocupacionSubsuelo = calcOcupacionPorSubsuelo(b, l, s, r);
-  const ocupacionFranja = calcOcupacionPorFranja(r);
+  const ocupacionDiaSemana = calcOcupacionPorDiaSemana(r);
   const rotacionJerarquia = calcRotacionPorJerarquia(p, r);
   const rotacionUsuario = calcRotacionPorUsuario(p, r);
   const ranking = calcRankingCocheras(s, b, r);
@@ -81,7 +81,7 @@ export default async function AdminEstadisticasPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <OcupacionPorEdificioChart data={ocupacionEdificio} />
         <OcupacionPorSubsueloChart data={ocupacionSubsuelo} />
-        <OcupacionPorFranjaChart data={ocupacionFranja} />
+        <OcupacionPorDiaSemanaChart data={ocupacionDiaSemana} />
         <RotacionPorJerarquiaChart data={rotacionJerarquia} />
       </div>
 

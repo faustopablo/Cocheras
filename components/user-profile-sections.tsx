@@ -205,8 +205,7 @@ export function HistorialReservasSection({
               <TableHeader>
                 <TableRow>
                   <TableHead>Cochera</TableHead>
-                  <TableHead>Inicio</TableHead>
-                  <TableHead>Fin</TableHead>
+                  <TableHead>Fecha</TableHead>
                   <TableHead>Origen</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Check-in</TableHead>
@@ -224,8 +223,7 @@ export function HistorialReservasSection({
                         </span>
                       )}
                     </TableCell>
-                    <TableCell>{formatDateTime(r.fecha_inicio)}</TableCell>
-                    <TableCell>{formatDateTime(r.fecha_fin)}</TableCell>
+                    <TableCell>{formatDate(r.fecha)}</TableCell>
                     <TableCell>{ORIGEN_LABEL[r.origen]}</TableCell>
                     <TableCell>
                       <Badge variant={ESTADO_RESERVA_VARIANT[r.estado]}>

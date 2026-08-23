@@ -9,8 +9,8 @@ export async function createGuestReservationAction(input: {
   empresa: string;
   patente: string;
   spotId: string;
-  fechaInicio: string;
-  fechaFin: string;
+  /** Fecha (día completo) de la reserva, formato yyyy-MM-dd. */
+  fecha: string;
 }): Promise<ActionResult> {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
@@ -31,10 +31,8 @@ export async function createGuestReservationAction(input: {
     return { ok: false, error: "La cochera elegida no está disponible en este momento." };
   }
 
-  const inicio = new Date(input.fechaInicio);
-  const fin = new Date(input.fechaFin);
-  if (isNaN(inicio.getTime()) || isNaN(fin.getTime()) || fin <= inicio) {
-    return { ok: false, error: "El rango de fechas ingresado no es válido." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.fecha)) {
+    return { ok: false, error: "La fecha ingresada no es válida." };
   }
 
   const { data: guest, error: guestError } = await supabase
@@ -55,8 +53,7 @@ export async function createGuestReservationAction(input: {
     spot_id: spot.id,
     guest_id: guest.id,
     origen: "invitado",
-    fecha_inicio: inicio.toISOString(),
-    fecha_fin: fin.toISOString(),
+    fecha: input.fecha,
     estado: "activa",
     created_by: userData.user.id,
   });
@@ -64,8 +61,8 @@ export async function createGuestReservationAction(input: {
   if (resError) {
     return {
       ok: false,
-      error: resError.message.includes("superpone")
-        ? "Ya existe una reserva activa que se superpone con ese horario."
+      error: resError.message.includes("reserva activa para ese día")
+        ? "Esa cochera ya tiene una reserva activa para ese día."
         : "No se pudo crear la reserva del invitado.",
     };
   }

@@ -120,9 +120,10 @@ npm run dev
 ### Liberación automática de no-shows
 
 La función SQL `public.release_no_show_reservations()` (en
-`supabase/migrations/0002_functions_and_cron.sql`) libera las reservas
-`activa` sin check-in que superaron `parking_rules.minutos_tolerancia_no_show`,
-y crea una notificación in-app.
+`supabase/migrations/0002_functions_and_cron.sql`, adaptada al modelo diario
+por `0005_una_cochera_por_dia.sql`) libera las reservas `activa` sin
+check-in cuyo día reservado ya pasó, o que corresponden a hoy y ya se
+cruzó `parking_rules.hora_limite_checkin`, y crea una notificación in-app.
 
 Para programarla, habilitá las extensiones `pg_cron` y `pg_net` (Database >
 Extensions) y corré (ver comentarios completos en la migración):
@@ -167,8 +168,31 @@ Puntos clave:
 - RLS: cada usuario ve/edita sus propios datos; `public.is_admin()` (función
   `security definer`) le da bypass a los administradores sin generar
   recursión en las policies.
-- `reservations` tiene un trigger que impide dos reservas activas
-  superpuestas sobre la misma cochera.
+- **Reservas diarias (no por franja horaria)**
+  (`0005_una_cochera_por_dia.sql`): una reserva es una cochera + un día
+  completo (columna `reservations.fecha`), no un rango horario. `check_in_at`
+  / `check_out_at` siguen siendo timestamps puntuales dentro de ese día.
+  `parking_rules.horas_max_por_reserva` y `minutos_tolerancia_no_show` se
+  eliminaron; se reemplazan por `hora_limite_checkin` (hora del día): si al
+  llegar esa hora no hubo check-in, `release_no_show_reservations()` libera
+  la reserva.
+- **Máximo una cochera por usuario por día** (`0005_una_cochera_por_dia.sql`):
+  - Un índice único parcial `uq_reservations_user_fecha_activa` sobre
+    `(user_id, fecha)` (solo para `estado = 'activa'` y `user_id` no nulo)
+    impide que un colaborador tenga dos reservas activas el mismo día, sin
+    importar la cochera. Las reservas de invitados (`guest_id`, `user_id`
+    nulo) no cuentan contra este cupo.
+  - El trigger `reservations_bloquea_dia_fijo_no_liberado` rechaza una
+    reserva puntual si el usuario tiene cochera fija asignada ese día de la
+    semana y no la liberó para esa fecha (mensaje: "Ya tenés tu cochera fija
+    asignada ese día..."); si la liberó, puede reservar otra cochera ese día
+    (ej. va a otro edificio).
+  - Al crear/editar una asignación fija (admin), si el usuario ya tiene
+    reservas activas futuras en días que pasan a ser fijos, no se bloquea
+    (el admin manda): la Server Action devuelve un `warning` con el detalle
+    para que el admin decida.
+- `reservations` tiene un trigger (`reservations_no_overlap`) que impide dos
+  reservas activas para la misma cochera el mismo día.
 - **Liberación de cochera fija por rango de fechas** (`0003_fixed_spot_releases.sql`,
   ajustada por `0004_fixed_spot_assignments.sql`): el titular de una
   asignación libera sus días creando una fila en `fixed_spot_releases` con

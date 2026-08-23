@@ -148,6 +148,42 @@ export async function deleteSpotAction(spotId: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+/** Día ISO (1=lunes..7=domingo) de una fecha "yyyy-MM-dd", sin líos de huso horario. */
+function isoWeekdayFromFecha(fecha: string): number {
+  const [y, m, d] = fecha.split("-").map(Number);
+  const js = new Date(y, (m ?? 1) - 1, d ?? 1).getDay();
+  return js === 0 ? 7 : js;
+}
+
+/**
+ * Si el usuario ya tiene reservas activas futuras que caen en alguno de
+ * los días que se le están asignando como cochera fija, no bloquea el
+ * alta/edición (el admin manda) pero devuelve una advertencia con el
+ * detalle para que decida si hay que avisarle o cancelarlas a mano.
+ */
+async function buildFixedAssignmentWarning(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  dias: number[]
+): Promise<string | undefined> {
+  const hoy = new Date().toISOString().slice(0, 10);
+  const { data: reservas } = await supabase
+    .from("reservations")
+    .select("fecha, spot:parking_spots(codigo)")
+    .eq("user_id", userId)
+    .eq("estado", "activa")
+    .gte("fecha", hoy);
+
+  const lista = (reservas ?? []) as unknown as { fecha: string; spot: { codigo: string } | null }[];
+  const enConflicto = lista.filter((r) => dias.includes(isoWeekdayFromFecha(r.fecha)));
+  if (enConflicto.length === 0) return undefined;
+
+  const detalle = enConflicto
+    .map((r) => `${r.fecha}${r.spot?.codigo ? ` (${r.spot.codigo})` : ""}`)
+    .join(", ");
+  return `El usuario ya tiene ${enConflicto.length} reserva(s) activa(s) que caen en los días asignados: ${detalle}. No se cancelaron automáticamente.`;
+}
+
 export async function createFixedSpotAssignmentAction(input: {
   spotId: string;
   userId: string;
@@ -163,7 +199,8 @@ export async function createFixedSpotAssignmentAction(input: {
     return { ok: false, error: describeDbError(error, "crear la asignación") };
   }
   revalidateAll();
-  return { ok: true };
+  const warning = await buildFixedAssignmentWarning(supabase, input.userId, input.dias);
+  return { ok: true, warning };
 }
 
 export async function updateFixedSpotAssignmentAction(input: {
@@ -180,7 +217,8 @@ export async function updateFixedSpotAssignmentAction(input: {
     return { ok: false, error: describeDbError(error, "actualizar la asignación") };
   }
   revalidateAll();
-  return { ok: true };
+  const warning = await buildFixedAssignmentWarning(supabase, input.userId, input.dias);
+  return { ok: true, warning };
 }
 
 export async function deleteFixedSpotAssignmentAction(assignmentId: string): Promise<ActionResult> {

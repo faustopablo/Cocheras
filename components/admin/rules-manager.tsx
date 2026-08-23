@@ -22,9 +22,8 @@ function RuleForm({
 }) {
   const router = useRouter();
   const [dias, setDias] = useState(rule?.dias_max_reserva_futura ?? 14);
-  const [horas, setHoras] = useState(rule?.horas_max_por_reserva ?? 12);
   const [maxSimultaneas, setMaxSimultaneas] = useState(rule?.max_reservas_simultaneas_por_usuario ?? 1);
-  const [tolerancia, setTolerancia] = useState(rule?.minutos_tolerancia_no_show ?? 30);
+  const [horaLimite, setHoraLimite] = useState(rule?.hora_limite_checkin?.slice(0, 5) ?? "11:00");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -33,9 +32,8 @@ function RuleForm({
     const res = await upsertRuleAction({
       buildingId,
       diasMaxReservaFutura: dias,
-      horasMaxPorReserva: horas,
       maxReservasSimultaneasPorUsuario: maxSimultaneas,
-      minutosToleranciaNoShow: tolerancia,
+      horaLimiteCheckin: horaLimite,
     });
     setSaving(false);
     if (res.ok) router.refresh();
@@ -55,10 +53,6 @@ function RuleForm({
             <Input type="number" min={0} value={dias} onChange={(e) => setDias(Number(e.target.value))} />
           </div>
           <div>
-            <Label>Horas máximas por reserva</Label>
-            <Input type="number" min={1} value={horas} onChange={(e) => setHoras(Number(e.target.value))} />
-          </div>
-          <div>
             <Label>Máx. reservas simultáneas por usuario</Label>
             <Input
               type="number"
@@ -68,13 +62,15 @@ function RuleForm({
             />
           </div>
           <div>
-            <Label>Minutos de tolerancia para no-show</Label>
+            <Label>Hora límite de check-in</Label>
             <Input
-              type="number"
-              min={0}
-              value={tolerancia}
-              onChange={(e) => setTolerancia(Number(e.target.value))}
+              type="time"
+              value={horaLimite}
+              onChange={(e) => setHoraLimite(e.target.value)}
             />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Si a esa hora del día reservado no hubo check-in, la reserva se libera automáticamente.
+            </p>
           </div>
           <Button type="submit" disabled={saving} className="sm:col-span-2 self-start">
             {saving ? "Guardando..." : "Guardar regla"}

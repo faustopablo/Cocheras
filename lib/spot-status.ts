@@ -53,44 +53,40 @@ export function isSpotReleasedOnDate(
 /**
  * Calcula el estado "efectivo" de una cochera combinando el estado base
  * (columna `estado`, que administra un admin, p. ej. para
- * 'fuera_de_servicio') con las reservas activas vigentes en este momento
- * y, para cocheras fijas, con si hoy existe una liberación por rango de
- * fechas activa (ver `fixed_spot_releases`). Esto evita tener que correr
- * un cron que actualice `estado` cada vez que arranca/termina una reserva
- * programada o una liberación.
+ * 'fuera_de_servicio') con si hay una reserva activa para la fecha vista
+ * y, para cocheras fijas, con si esa fecha cae dentro de un rango
+ * liberado activo (ver `fixed_spot_releases`). Esto evita tener que
+ * correr un cron que actualice `estado` cada vez que se crea/cancela una
+ * reserva o una liberación.
  *
- * `isReleasedToday` solo aplica a cocheras `tipo: 'fija'`: indica si hoy
- * cae dentro de un rango liberado activo para esa cochera.
+ * Las reservas son diarias (una reserva = una cochera + un día), así que
+ * `activeReservation` ya debe corresponder exactamente a la fecha que se
+ * está proyectando (ver `computeSpotDisplayForDate`).
  */
 /**
  * Estado visual de una cochera. Extiende `EstadoCochera` (la columna
  * `estado` de la base, que administra un admin) con `"asignada"`: una
  * cochera fija con dueño asignado el día visto, que ese dueño no liberó
  * y sobre la que nadie tiene una reserva activa. Se distingue de
- * `"ocupada"`, que implica que alguien tiene una reserva activa (o
- * check-in) en curso sobre la cochera.
+ * `"ocupada"`, que implica que alguien tiene una reserva activa para ese
+ * día.
  */
 export type SpotDisplayEstado = EstadoCochera | "asignada";
 
 export function computeSpotDisplayStatus(
   spot: ParkingSpot,
   activeReservation: Reservation | null | undefined,
-  isReleasedToday?: boolean
+  isReleasedOnDate?: boolean
 ): SpotDisplayEstado {
   if (spot.estado === "fuera_de_servicio") return "fuera_de_servicio";
 
-  if (activeReservation) {
-    const now = Date.now();
-    const inicio = new Date(activeReservation.fecha_inicio).getTime();
-    const fin = new Date(activeReservation.fecha_fin).getTime();
-    if (now >= inicio && now <= fin) return "ocupada";
-  }
+  if (activeReservation) return "ocupada";
 
   if (spot.tipo === "fija") {
     // Nadie tiene una reserva activa: si no se liberó, está "asignada" a
     // su dueño de ese día (no "ocupada": eso se reserva para cuando hay
-    // una reserva puntual/check-in en curso).
-    return isReleasedToday ? "libre" : "asignada";
+    // una reserva puntual sobre la cochera).
+    return isReleasedOnDate ? "libre" : "asignada";
   }
 
   return spot.estado;
@@ -99,51 +95,45 @@ export function computeSpotDisplayStatus(
 /** Resultado de proyectar el estado visual de una cochera para una fecha dada. */
 export interface SpotDisplayInfo {
   estado: SpotDisplayEstado;
-  /** true si la cochera es "mía": la reserva activa es mía, o (si es fija)
-   * el dueño asignado ese día de la semana soy yo, esté liberada o no. */
+  /** true si la cochera es "mía": la reserva activa ese día es mía, o (si
+   * es fija) el dueño asignado ese día de la semana soy yo, esté liberada
+   * o no. */
   esMia: boolean;
-  /** true específicamente cuando hay una reserva puntual activa y es mía
-   * (permite mostrar la hora de fin). */
+  /** true específicamente cuando hay una reserva puntual activa ese día y
+   * es mía. */
   esReservaPropia: boolean;
   /** La reserva activa considerada para esta fecha, si corresponde. */
   reservaActiva: Reservation | null;
-  /** true si `date` no es hoy: la disponibilidad de reservas puntuales no
-   * se proyecta (ver limitación en `computeSpotDisplayForDate`). */
+  /** true si `date` no es hoy: solo cambia el copy ("estado en vivo" vs.
+   * "disponibilidad proyectada"); el cálculo es igualmente exacto porque
+   * las reservas ahora son diarias. */
   esProyeccion: boolean;
 }
 
 /**
  * Proyecta el estado visual de una cochera para `date` (hoy por defecto),
- * combinando el estado en vivo (hoy) con la disponibilidad fija proyectada
- * (asignaciones por día de semana + liberaciones) para fechas futuras.
- *
- * Límite conocido: para fechas distintas de hoy NO se proyectan reservas
- * puntuales (ni de cocheras `tipo: 'libre'` ni las hechas sobre una fija
- * liberada), porque el modelo actual no permite calcular disponibilidad
- * futura de reservas puntuales de forma económica desde el cliente. Una
- * fecha futura solo refleja quién es el dueño fijo asignado ese día de la
- * semana y si ese dueño la liberó por rango de fechas; no refleja reservas
- * puntuales ya tomadas por otros para ese día futuro.
+ * combinando el estado base con la disponibilidad fija (asignaciones por
+ * día de semana + liberaciones) y con si existe una reserva puntual
+ * activa exactamente para esa fecha. `reservationOnDate` debe ser la
+ * reserva activa de la cochera para `date` (si existe), resuelta por el
+ * caller (ver `components/spots-board.tsx`).
  */
 export function computeSpotDisplayForDate(
   spot: ParkingSpot,
   assignments: FixedSpotAssignment[],
   releases: FixedSpotRelease[],
-  activeReservationToday: Reservation | null | undefined,
+  reservationOnDate: Reservation | null | undefined,
   currentUserId: string,
   date: Date = new Date()
 ): SpotDisplayInfo {
-  const esHoy = toLocalDateValue(date) === toLocalDateValue(new Date());
-  const esProyeccion = !esHoy;
-
-  // Las reservas puntuales solo se consideran para "hoy" (estado en vivo).
-  const activeReservation = esHoy ? activeReservationToday ?? null : null;
+  const esProyeccion = !isSameLocalDate(date, new Date());
 
   const owningAssignment =
     spot.tipo === "fija" ? getOwningAssignmentOnDate(assignments, spot.id, date) : null;
   const isReleasedOnDate =
     spot.tipo === "fija" ? isSpotReleasedOnDate(assignments, releases, spot.id, date) : undefined;
 
+  const activeReservation = reservationOnDate ?? null;
   const estado = computeSpotDisplayStatus(spot, activeReservation, isReleasedOnDate);
   const esReservaPropia = !!activeReservation && activeReservation.user_id === currentUserId;
   const esDuenioFijo = !!owningAssignment && owningAssignment.user_id === currentUserId;
@@ -160,6 +150,10 @@ export function computeSpotDisplayForDate(
     reservaActiva: activeReservation,
     esProyeccion,
   };
+}
+
+function isSameLocalDate(a: Date, b: Date) {
+  return toLocalDateValue(a) === toLocalDateValue(b);
 }
 
 export const ESTADO_LABEL: Record<SpotDisplayEstado, string> = {

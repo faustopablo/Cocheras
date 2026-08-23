@@ -59,7 +59,7 @@ export default async function AdminUsuarioDetallePage({
         .from("reservations")
         .select("*, spot:parking_spots(*, building:buildings(*))")
         .eq("user_id", id)
-        .order("fecha_inicio", { ascending: false })
+        .order("fecha", { ascending: false })
         .limit(limit),
     ]);
 

@@ -44,10 +44,9 @@ export default async function HomePage() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">Cocheras disponibles</h1>
         <p className="text-sm text-muted-foreground">
-          Estado en vivo por edificio y subsuelo para hoy. Los cambios de otros usuarios se
-          reflejan automáticamente. Elegí otra fecha para ver la disponibilidad proyectada de
-          cocheras fijas (asignaciones y liberaciones); las reservas puntuales de otros
-          colaboradores no se proyectan a futuro.
+          Estado en vivo por edificio y subsuelo. Los cambios de otros usuarios se reflejan
+          automáticamente. Elegí otra fecha para ver la disponibilidad exacta de ese día: las
+          reservas son por día completo, así que se proyectan igual de precisas a futuro.
         </p>
       </div>
       <SpotsBoard

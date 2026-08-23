@@ -5,10 +5,6 @@ import { cn } from "@/lib/utils";
 import type { SpotDisplayInfo } from "@/lib/spot-status";
 import type { ParkingSpot } from "@/lib/database.types";
 
-function formatHora(iso: string) {
-  return new Date(iso).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
-}
-
 /**
  * Tarjeta con forma de plaza de estacionamiento. La presentación deriva
  * pura y exclusivamente de `display` (calculado con
@@ -44,11 +40,7 @@ export function SpotCard({
     }
     if (fueraDeServicio) return;
     if (reservadaPorOtro) {
-      alert(
-        `Cochera ${spot.codigo}: reservada por otro colaborador${
-          reservaActiva ? ` hasta las ${formatHora(reservaActiva.fecha_fin)}.` : "."
-        }`
-      );
+      alert(`Cochera ${spot.codigo}: reservada por otro colaborador este día.`);
       return;
     }
     if (asignadaAOtro) {
@@ -131,9 +123,7 @@ export function SpotCard({
       </span>
 
       {esReservaPropia && reservaActiva && (
-        <span className="text-[10px] font-semibold text-white/90">
-          hasta {formatHora(reservaActiva.fecha_fin)}
-        </span>
+        <span className="text-[10px] font-semibold text-white/90">Tu reserva</span>
       )}
       {esMia && !esReservaPropia && (
         <span className="text-[10px] font-semibold text-white/90">Tu día</span>

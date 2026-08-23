@@ -7,6 +7,28 @@ import type { ParkingRule } from "@/lib/database.types";
 export interface ActionResult {
   ok: boolean;
   error?: string;
+  /** Advertencia no bloqueante (ej. asignar una cochera fija sobre días con reservas futuras). */
+  warning?: string;
+}
+
+/**
+ * Traduce los mensajes de excepción de los triggers de `reservations`
+ * (ver `supabase/migrations/0005_una_cochera_por_dia.sql`) a mensajes
+ * claros en español.
+ */
+function describeReservationError(error: { message: string; code?: string }): string {
+  const msg = error.message ?? "";
+
+  if (msg.includes("cochera fija asignada ese día")) {
+    return "Ya tenés tu cochera fija asignada ese día. Si no la vas a usar, liberala primero.";
+  }
+  if (error.code === "23505" || msg.includes("uq_reservations_user_fecha_activa")) {
+    return "Ya tenés una reserva activa ese día. No podés tener más de una cochera el mismo día.";
+  }
+  if (msg.includes("reserva activa para ese día")) {
+    return "Esa cochera ya tiene una reserva activa para ese día.";
+  }
+  return "No se pudo crear la reserva. Intentá de nuevo.";
 }
 
 async function getEffectiveRule(buildingId: string): Promise<ParkingRule> {
@@ -31,17 +53,16 @@ async function getEffectiveRule(buildingId: string): Promise<ParkingRule> {
       id: "default",
       building_id: null,
       dias_max_reserva_futura: 14,
-      horas_max_por_reserva: 12,
       max_reservas_simultaneas_por_usuario: 1,
-      minutos_tolerancia_no_show: 30,
+      hora_limite_checkin: "11:00",
     }
   );
 }
 
 export async function createReservationAction(input: {
   spotId: string;
-  fechaInicio: string;
-  fechaFin: string;
+  /** Fecha (día completo) a reservar, formato yyyy-MM-dd. */
+  fecha: string;
 }): Promise<ActionResult> {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
@@ -61,50 +82,40 @@ export async function createReservationAction(input: {
     return { ok: false, error: "Esta cochera está bloqueada por administración." };
   }
 
-  const inicio = new Date(input.fechaInicio);
-  const fin = new Date(input.fechaFin);
-  const ahora = new Date();
-
-  if (isNaN(inicio.getTime()) || isNaN(fin.getTime()) || fin <= inicio) {
-    return { ok: false, error: "El rango de fechas ingresado no es válido." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.fecha)) {
+    return { ok: false, error: "La fecha ingresada no es válida." };
   }
-  if (inicio < new Date(ahora.getTime() - 5 * 60 * 1000)) {
-    return { ok: false, error: "La fecha de inicio no puede estar en el pasado." };
+
+  const hoy = new Date();
+  const hoyFecha = hoy.toISOString().slice(0, 10);
+  if (input.fecha < hoyFecha) {
+    return { ok: false, error: "No podés reservar para una fecha pasada." };
   }
 
   if (spot.tipo === "fija") {
-    const inicioFecha = inicio.toISOString().slice(0, 10);
-    const finFecha = fin.toISOString().slice(0, 10);
-    // Disponible si, para cada fecha del rango, ese día de la semana no
-    // tiene dueño asignado o el dueño correspondiente la liberó.
+    // Disponible si ese día de la semana no tiene dueño asignado o el
+    // dueño correspondiente la liberó.
     const { data: disponible, error: disponibleError } = await supabase.rpc(
       "is_fixed_spot_released",
-      { p_spot_id: spot.id, p_desde: inicioFecha, p_hasta: finFecha }
+      { p_spot_id: spot.id, p_desde: input.fecha, p_hasta: input.fecha }
     );
 
     if (disponibleError || !disponible) {
       return {
         ok: false,
-        error: "Esta cochera fija tiene dueño en alguno de esos días y no fue liberada para esas fechas.",
+        error: "Esta cochera fija tiene dueño ese día y no fue liberada para esa fecha.",
       };
     }
   }
 
   const rule = await getEffectiveRule(spot.building_id);
 
-  const diasAdelante = (inicio.getTime() - ahora.getTime()) / (1000 * 60 * 60 * 24);
+  const diasAdelante =
+    (new Date(input.fecha).getTime() - new Date(hoyFecha).getTime()) / (1000 * 60 * 60 * 24);
   if (diasAdelante > rule.dias_max_reserva_futura) {
     return {
       ok: false,
       error: `No se puede reservar con más de ${rule.dias_max_reserva_futura} días de anticipación.`,
-    };
-  }
-
-  const horasReserva = (fin.getTime() - inicio.getTime()) / (1000 * 60 * 60);
-  if (horasReserva > rule.horas_max_por_reserva) {
-    return {
-      ok: false,
-      error: `La reserva no puede durar más de ${rule.horas_max_por_reserva} horas.`,
     };
   }
 
@@ -127,22 +138,19 @@ export async function createReservationAction(input: {
     spot_id: spot.id,
     user_id: userData.user.id,
     origen,
-    fecha_inicio: inicio.toISOString(),
-    fecha_fin: fin.toISOString(),
+    fecha: input.fecha,
     estado: "activa",
     created_by: userData.user.id,
   });
 
   if (insertError) {
-    return { ok: false, error: insertError.message.includes("superpone")
-      ? "Ya existe una reserva activa que se superpone con ese horario."
-      : "No se pudo crear la reserva. Intentá de nuevo." };
+    return { ok: false, error: describeReservationError(insertError) };
   }
 
   await supabase.from("notifications").insert({
     user_id: userData.user.id,
     tipo: "reserva_confirmada",
-    mensaje: `Reservaste la cochera ${spot.codigo}.`,
+    mensaje: `Reservaste la cochera ${spot.codigo} para el ${input.fecha}.`,
   });
 
   revalidatePath("/");

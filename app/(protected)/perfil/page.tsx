@@ -49,7 +49,7 @@ export default async function MiPerfilPage({
         .from("reservations")
         .select("*, spot:parking_spots(*, building:buildings(*))")
         .eq("user_id", profile.id)
-        .order("fecha_inicio", { ascending: false })
+        .order("fecha", { ascending: false })
         .limit(limit),
     ]);
 

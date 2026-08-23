@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createGuestReservationAction } from "@/app/actions/guests";
-import { toLocalInputValue } from "@/lib/utils";
+import { toLocalDateValue } from "@/lib/utils";
 import type { ParkingSpot } from "@/lib/database.types";
 
 export function GuestForm({ availableSpots }: { availableSpots: ParkingSpot[] }) {
@@ -17,10 +17,7 @@ export function GuestForm({ availableSpots }: { availableSpots: ParkingSpot[] })
   const [empresa, setEmpresa] = useState("");
   const [patente, setPatente] = useState("");
   const [spotId, setSpotId] = useState<string>("");
-  const [inicio, setInicio] = useState(() => toLocalInputValue(new Date()));
-  const [fin, setFin] = useState(() =>
-    toLocalInputValue(new Date(Date.now() + 4 * 60 * 60 * 1000))
-  );
+  const [fecha, setFecha] = useState(() => toLocalDateValue(new Date()));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -40,8 +37,7 @@ export function GuestForm({ availableSpots }: { availableSpots: ParkingSpot[] })
       empresa,
       patente,
       spotId,
-      fechaInicio: new Date(inicio).toISOString(),
-      fechaFin: new Date(fin).toISOString(),
+      fecha,
     });
 
     setLoading(false);
@@ -102,21 +98,13 @@ export function GuestForm({ availableSpots }: { availableSpots: ParkingSpot[] })
               </Select>
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="g-inicio">Desde</Label>
+              <Label htmlFor="g-fecha">Fecha</Label>
               <Input
-                id="g-inicio"
-                type="datetime-local"
-                value={inicio}
-                onChange={(e) => setInicio(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="g-fin">Hasta</Label>
-              <Input
-                id="g-fin"
-                type="datetime-local"
-                value={fin}
-                onChange={(e) => setFin(e.target.value)}
+                id="g-fecha"
+                type="date"
+                min={toLocalDateValue(new Date())}
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
               />
             </div>
           </div>

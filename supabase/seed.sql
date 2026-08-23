@@ -32,8 +32,8 @@ on conflict (id) do nothing;
 -- ---------------------------------------------------------------------
 -- Reglas globales
 -- ---------------------------------------------------------------------
-insert into public.parking_rules (building_id, dias_max_reserva_futura, horas_max_por_reserva, max_reservas_simultaneas_por_usuario, minutos_tolerancia_no_show)
-values (null, 14, 12, 1, 30)
+insert into public.parking_rules (building_id, dias_max_reserva_futura, max_reservas_simultaneas_por_usuario, hora_limite_checkin)
+values (null, 14, 1, '11:00')
 on conflict (building_id) do nothing;
 
 -- ---------------------------------------------------------------------

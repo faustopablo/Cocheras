@@ -17,8 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type {
   FijasLiberadasVsBloqueadas,
+  OcupacionPorDiaSemana,
   OcupacionPorEdificio,
-  OcupacionPorFranja,
   OcupacionPorSubsuelo,
   RankingCochera,
   RotacionPorJerarquia,
@@ -152,23 +152,23 @@ export function OcupacionPorSubsueloChart({ data }: { data: OcupacionPorSubsuelo
   );
 }
 
-export function OcupacionPorFranjaChart({ data }: { data: OcupacionPorFranja[] }) {
+export function OcupacionPorDiaSemanaChart({ data }: { data: OcupacionPorDiaSemana[] }) {
   return (
     <ChartCard
-      title="Ocupación por franja horaria"
-      description="Distribución de inicios de reserva a lo largo del día."
+      title="Ocupación por día de la semana"
+      description="Distribución de reservas según el día de la semana reservado."
       table={
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Franja</TableHead>
+              <TableHead>Día</TableHead>
               <TableHead>% de reservas</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.map((d) => (
-              <TableRow key={d.franja}>
-                <TableCell>{d.franja} hs</TableCell>
+              <TableRow key={d.dia}>
+                <TableCell>{d.dia}</TableCell>
                 <TableCell>{d.ocupacion}%</TableCell>
               </TableRow>
             ))}
@@ -179,7 +179,7 @@ export function OcupacionPorFranjaChart({ data }: { data: OcupacionPorFranja[] }
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-          <XAxis dataKey="franja" tick={{ fontSize: 12 }} />
+          <XAxis dataKey="dia" tick={{ fontSize: 12 }} />
           <YAxis unit="%" tick={{ fontSize: 12 }} />
           <Tooltip formatter={(value) => [`${value}%`, "% de reservas"]} />
           <Bar dataKey="ocupacion" fill={PALETTE.aqua} radius={[4, 4, 0, 0]} name="% de reservas" />

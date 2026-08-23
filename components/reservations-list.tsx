@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDateTime } from "@/lib/utils";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import { checkInAction, checkOutAction, cancelReservationAction } from "@/app/actions/reservations";
 import type { ReservationWithRelations, EstadoReserva } from "@/lib/database.types";
 
@@ -62,9 +62,7 @@ export function ReservationsList({
                     <p className="font-semibold">
                       {r.spot?.codigo} · {r.spot?.building?.nombre}
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDateTime(r.fecha_inicio)} — {formatDateTime(r.fecha_fin)}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{formatDate(r.fecha)}</p>
                     <p className="text-xs text-muted-foreground">
                       Check-in: {r.check_in_at ? formatDateTime(r.check_in_at) : "pendiente"}
                     </p>
@@ -118,8 +116,7 @@ export function ReservationsList({
                 <TableRow>
                   <TableHead>Cochera</TableHead>
                   <TableHead>Edificio</TableHead>
-                  <TableHead>Inicio</TableHead>
-                  <TableHead>Fin</TableHead>
+                  <TableHead>Fecha</TableHead>
                   <TableHead>Estado</TableHead>
                 </TableRow>
               </TableHeader>
@@ -128,8 +125,7 @@ export function ReservationsList({
                   <TableRow key={r.id}>
                     <TableCell>{r.spot?.codigo}</TableCell>
                     <TableCell>{r.spot?.building?.nombre}</TableCell>
-                    <TableCell>{formatDateTime(r.fecha_inicio)}</TableCell>
-                    <TableCell>{formatDateTime(r.fecha_fin)}</TableCell>
+                    <TableCell>{formatDate(r.fecha)}</TableCell>
                     <TableCell>
                       <Badge variant={ESTADO_VARIANT[r.estado]}>{ESTADO_LABEL[r.estado]}</Badge>
                     </TableCell>

@@ -13,7 +13,7 @@ export default async function AdminReservasPage() {
       .select(
         "*, spot:parking_spots(*, building:buildings(*), level:levels(*)), user:profiles(*), guest:guests(*)"
       )
-      .order("fecha_inicio", { ascending: false })
+      .order("fecha", { ascending: false })
       .limit(300),
     supabase.from("parking_spots").select("*"),
   ]);

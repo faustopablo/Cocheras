@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { GuestForm } from "@/components/guest-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDateTime } from "@/lib/utils";
+import { formatDate, toLocalDateValue } from "@/lib/utils";
 import type { ParkingSpot, ReservationWithRelations } from "@/lib/database.types";
 
 export const metadata = { title: "Invitados — Cocheras Comafi" };
@@ -18,18 +18,14 @@ export default async function InvitadosPage() {
     .eq("estado", "libre")
     .order("codigo");
 
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date();
-  endOfDay.setHours(23, 59, 59, 999);
+  const hoyFecha = toLocalDateValue(new Date());
 
   const { data: guestReservations } = await supabase
     .from("reservations")
     .select("*, guest:guests(*), spot:parking_spots(*, building:buildings(*))")
     .eq("origen", "invitado")
-    .gte("fecha_inicio", startOfDay.toISOString())
-    .lte("fecha_inicio", endOfDay.toISOString())
-    .order("fecha_inicio", { ascending: true });
+    .eq("fecha", hoyFecha)
+    .order("created_at", { ascending: true });
 
   const hoy = (guestReservations ?? []) as ReservationWithRelations[];
 
@@ -60,7 +56,7 @@ export default async function InvitadosPage() {
                   <TableHead>Empresa</TableHead>
                   <TableHead>Patente</TableHead>
                   <TableHead>Cochera</TableHead>
-                  <TableHead>Horario</TableHead>
+                  <TableHead>Fecha</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -72,9 +68,7 @@ export default async function InvitadosPage() {
                     <TableCell>
                       {r.spot?.codigo} ({r.spot?.building?.nombre})
                     </TableCell>
-                    <TableCell>
-                      {formatDateTime(r.fecha_inicio)} — {formatDateTime(r.fecha_fin)}
-                    </TableCell>
+                    <TableCell>{formatDate(r.fecha)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

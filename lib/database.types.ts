@@ -66,8 +66,8 @@ export interface Reservation {
   user_id: string | null;
   guest_id: string | null;
   origen: OrigenReserva;
-  fecha_inicio: string;
-  fecha_fin: string;
+  /** Fecha (día completo) de la reserva. yyyy-MM-dd. */
+  fecha: string;
   estado: EstadoReserva;
   check_in_at: string | null;
   check_out_at: string | null;
@@ -98,9 +98,9 @@ export interface ParkingRule {
   id: string;
   building_id: string | null;
   dias_max_reserva_futura: number;
-  horas_max_por_reserva: number;
   max_reservas_simultaneas_por_usuario: number;
-  minutos_tolerancia_no_show: number;
+  /** Hora límite (HH:mm) del día reservado para hacer check-in antes de liberarse como no-show. */
+  hora_limite_checkin: string;
 }
 
 export interface AppNotification {
