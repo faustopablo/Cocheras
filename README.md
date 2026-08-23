@@ -1,9 +1,9 @@
 # Cocheras Comafi
 
 MVP de una plataforma de reservas de cocheras corporativas para Banco Comafi
-(Argentina). Permite reservar cocheras libres, liberar/tomar cocheras fijas,
-gestionar invitados (sin DNI), y administrar edificios, usuarios, reglas y
-estadísticas de uso.
+(Argentina). Permite reservar cocheras libres, liberar cocheras fijas por
+rango de fechas (ej. vacaciones), gestionar invitados (sin DNI), y
+administrar edificios, usuarios, reglas y estadísticas de uso.
 
 ## Stack
 
@@ -29,7 +29,8 @@ app/                         # App Router (Next.js)
     reservas/                # Mis reservas (check-in/out, cancelar)
     invitados/                # Alta de invitados + listado de hoy
     admin/                   # Rutas solo-admin (guard server-side + middleware)
-      edificios/ usuarios/ reservas/ reglas/ estadisticas/
+      page.tsx               # Hub de Administración (tarjetas a cada sección)
+      edificios/ cocheras/ usuarios/ reservas/ reglas/ estadisticas/
   actions/                   # Server Actions (mutaciones)
 components/                  # UI (shadcn-like) + componentes de negocio
 lib/                         # Supabase clients, tipos, helpers de auth/stats
@@ -60,9 +61,10 @@ supabase link --project-ref <tu-project-ref>
 supabase db push          # aplica supabase/migrations/*.sql
 ```
 
-O manualmente: pegar el contenido de `supabase/migrations/0001_init.sql` y
-luego `0002_functions_and_cron.sql` en el SQL Editor del dashboard, en ese
-orden.
+O manualmente: pegar el contenido de `supabase/migrations/0001_init.sql`,
+luego `0002_functions_and_cron.sql` y luego `0003_fixed_spot_releases.sql`
+en el SQL Editor del dashboard, en ese orden exacto (cada migración asume
+que las anteriores ya corrieron).
 
 ### 3. Cargar datos de ejemplo (opcional)
 
@@ -167,20 +169,34 @@ Puntos clave:
   recursión en las policies.
 - `reservations` tiene un trigger que impide dos reservas activas
   superpuestas sobre la misma cochera.
-- `release_fixed_spot` / `reclaim_fixed_spot` son funciones `security
-  definer` que garantizan que solo el titular de una cochera fija pueda
-  liberarla o retomarla (y al retomarla, cancelan cualquier reserva de un
-  tercero sobre esa cochera).
+- **Liberación de cochera fija por rango de fechas** (`0003_fixed_spot_releases.sql`):
+  el titular de una cochera fija la libera creando una fila en
+  `fixed_spot_releases` con `fecha_desde`/`fecha_hasta` (ej. vacaciones),
+  vía la función `create_fixed_spot_release` (`security definer`, valida
+  que sea el titular o un admin). Un trigger (`fixed_spot_releases_no_overlap`)
+  impide rangos activos superpuestos para la misma cochera. La función
+  `is_fixed_spot_released(spot_id, desde, hasta)` (y la vista
+  `fixed_spots_release_status` para el estado de "hoy") determinan si una
+  cochera fija está disponible para que la reserve un tercero (origen
+  `fija_liberada`) en un rango dado; el trigger de reservas superpuestas
+  sigue aplicando igual que para cualquier otra cochera. Cancelar una
+  liberación (`cancel_fixed_spot_release`) **no** cancela las reservas que
+  terceros ya hayan hecho dentro de ese rango. Este modelo reemplaza al
+  toggle inmediato anterior (`release_fixed_spot` / `reclaim_fixed_spot`
+  sobre `parking_spots.estado`), que la migración `0003` elimina.
 
 ## Limitaciones conocidas del MVP
 
 - No hay integración real de envío de emails (ver stub arriba) ni de Azure
   AD/SSO — login es email/password de Supabase Auth únicamente.
 - El estado "en vivo" de una cochera combina la columna `estado` con las
-  reservas activas vigentes en el momento de la consulta (ver
-  `lib/spot-status.ts`); no hay un job que mueva `parking_spots.estado` al
-  iniciar/finalizar una reserva programada, ya que el cálculo en lectura lo
-  hace innecesario para este MVP.
+  reservas activas vigentes y, para cocheras fijas, con si hoy cae dentro
+  de una liberación activa (ver `lib/spot-status.ts` y
+  `fixed_spot_releases`) en el momento de la consulta; no hay un job que
+  actualice estados al iniciar/finalizar una reserva o liberación
+  programada, ya que el cálculo en lectura lo hace innecesario para este
+  MVP. Para cocheras fijas, el campo `parking_spots.estado` solo importa
+  para marcarlas `fuera_de_servicio`.
 - Las estadísticas se calculan en el servidor a partir de datos crudos
   (`lib/stats.ts`) en cada request; para volúmenes grandes convendría
   materializar vistas o agregaciones en SQL.

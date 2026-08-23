@@ -328,6 +328,13 @@ function SpotFormDialog({
                   ))}
                 </SelectContent>
               </Select>
+              {tipo === "fija" && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  En cocheras fijas este campo solo importa para marcarla &quot;fuera de servicio&quot;.
+                  La disponibilidad para que otros la reserven se gestiona con liberaciones por
+                  rango de fechas (el titular las crea desde &quot;Mi cochera fija&quot;).
+                </p>
+              )}
             </div>
           )}
           <div className="flex items-center gap-2">

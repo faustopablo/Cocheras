@@ -57,9 +57,6 @@ export async function createReservationAction(input: {
   if (spot.estado === "fuera_de_servicio") {
     return { ok: false, error: "Esta cochera está fuera de servicio." };
   }
-  if (spot.tipo === "fija" && spot.estado !== "libre") {
-    return { ok: false, error: "Esta cochera fija no fue liberada por su titular." };
-  }
   if (spot.tipo === "libre" && spot.estado === "bloqueada") {
     return { ok: false, error: "Esta cochera está bloqueada por administración." };
   }
@@ -73,6 +70,25 @@ export async function createReservationAction(input: {
   }
   if (inicio < new Date(ahora.getTime() - 5 * 60 * 1000)) {
     return { ok: false, error: "La fecha de inicio no puede estar en el pasado." };
+  }
+
+  if (spot.tipo === "fija") {
+    const inicioFecha = inicio.toISOString().slice(0, 10);
+    const finFecha = fin.toISOString().slice(0, 10);
+    const { count: liberacionesQueCubren } = await supabase
+      .from("fixed_spot_releases")
+      .select("id", { count: "exact", head: true })
+      .eq("spot_id", spot.id)
+      .eq("estado", "activa")
+      .lte("fecha_desde", inicioFecha)
+      .gte("fecha_hasta", finFecha);
+
+    if (!liberacionesQueCubren) {
+      return {
+        ok: false,
+        error: "Esta cochera fija no fue liberada por su titular para esas fechas.",
+      };
+    }
   }
 
   const rule = await getEffectiveRule(spot.building_id);
@@ -179,18 +195,36 @@ export async function checkOutAction(reservationId: string): Promise<ActionResul
   return { ok: true };
 }
 
-export async function releaseFixedSpotAction(spotId: string): Promise<ActionResult> {
+export async function createFixedSpotReleaseAction(input: {
+  spotId: string;
+  fechaDesde: string;
+  fechaHasta: string;
+  motivo?: string;
+}): Promise<ActionResult> {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("release_fixed_spot", { p_spot_id: spotId });
-  if (error) return { ok: false, error: error.message };
+  const { error } = await supabase.rpc("create_fixed_spot_release", {
+    p_spot_id: input.spotId,
+    p_fecha_desde: input.fechaDesde,
+    p_fecha_hasta: input.fechaHasta,
+    p_motivo: input.motivo?.trim() || null,
+  });
+
+  if (error) {
+    return {
+      ok: false,
+      error: error.message.includes("superpone")
+        ? "Ya existe una liberación activa que se superpone con esas fechas."
+        : error.message,
+    };
+  }
 
   revalidatePath("/");
   return { ok: true };
 }
 
-export async function reclaimFixedSpotAction(spotId: string): Promise<ActionResult> {
+export async function cancelFixedSpotReleaseAction(releaseId: string): Promise<ActionResult> {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("reclaim_fixed_spot", { p_spot_id: spotId });
+  const { error } = await supabase.rpc("cancel_fixed_spot_release", { p_release_id: releaseId });
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/");

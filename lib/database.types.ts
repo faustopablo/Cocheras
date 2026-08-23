@@ -7,6 +7,7 @@ export type TipoCochera = "fija" | "libre";
 export type EstadoCochera = "libre" | "ocupada" | "bloqueada" | "fuera_de_servicio";
 export type OrigenReserva = "fija_liberada" | "libre" | "invitado";
 export type EstadoReserva = "activa" | "cancelada" | "completada" | "no_show";
+export type EstadoLiberacion = "activa" | "cancelada";
 export type TipoNotificacion =
   | "reserva_confirmada"
   | "reserva_cancelada"
@@ -61,6 +62,17 @@ export interface Reservation {
   check_in_at: string | null;
   check_out_at: string | null;
   created_by: string | null;
+  created_at: string;
+}
+
+export interface FixedSpotRelease {
+  id: string;
+  spot_id: string;
+  user_id: string;
+  fecha_desde: string;
+  fecha_hasta: string;
+  motivo: string | null;
+  estado: EstadoLiberacion;
   created_at: string;
 }
 

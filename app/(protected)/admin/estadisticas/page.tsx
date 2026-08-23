@@ -19,27 +19,42 @@ import {
   RotacionPorJerarquiaChart,
   RotacionPorUsuarioTable,
 } from "@/components/admin/stats-charts";
-import type { Building, Level, ParkingSpot, Profile, Reservation } from "@/lib/database.types";
+import type {
+  Building,
+  FixedSpotRelease,
+  Level,
+  ParkingSpot,
+  Profile,
+  Reservation,
+} from "@/lib/database.types";
 
 export const metadata = { title: "Estadísticas — Admin Cocheras Comafi" };
 
 export default async function AdminEstadisticasPage() {
   const supabase = await createClient();
 
-  const [{ data: buildings }, { data: levels }, { data: spots }, { data: profiles }, { data: reservations }] =
-    await Promise.all([
-      supabase.from("buildings").select("*"),
-      supabase.from("levels").select("*"),
-      supabase.from("parking_spots").select("*"),
-      supabase.from("profiles").select("*"),
-      supabase.from("reservations").select("*"),
-    ]);
+  const [
+    { data: buildings },
+    { data: levels },
+    { data: spots },
+    { data: profiles },
+    { data: reservations },
+    { data: releases },
+  ] = await Promise.all([
+    supabase.from("buildings").select("*"),
+    supabase.from("levels").select("*"),
+    supabase.from("parking_spots").select("*"),
+    supabase.from("profiles").select("*"),
+    supabase.from("reservations").select("*"),
+    supabase.from("fixed_spot_releases").select("*").eq("estado", "activa"),
+  ]);
 
   const b = (buildings ?? []) as Building[];
   const l = (levels ?? []) as Level[];
   const s = (spots ?? []) as ParkingSpot[];
   const p = (profiles ?? []) as Profile[];
   const r = (reservations ?? []) as Reservation[];
+  const fr = (releases ?? []) as FixedSpotRelease[];
 
   const ocupacionEdificio = calcOcupacionPorEdificio(b, s, r);
   const ocupacionSubsuelo = calcOcupacionPorSubsuelo(b, l, s, r);
@@ -48,7 +63,7 @@ export default async function AdminEstadisticasPage() {
   const rotacionUsuario = calcRotacionPorUsuario(p, r);
   const ranking = calcRankingCocheras(s, b, r);
   const tasaNoShow = calcTasaNoShow(r);
-  const fijas = calcFijasLiberadasVsBloqueadas(s);
+  const fijas = calcFijasLiberadasVsBloqueadas(s, fr);
 
   return (
     <div className="flex flex-col gap-6">

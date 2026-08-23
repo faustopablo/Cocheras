@@ -1,11 +1,13 @@
 import type {
   Building,
+  FixedSpotRelease,
   Jerarquia,
   Level,
   ParkingSpot,
   Profile,
   Reservation,
 } from "@/lib/database.types";
+import { isSpotReleasedOnDate } from "@/lib/spot-status";
 
 export interface OcupacionPorEdificio {
   edificio: string;
@@ -183,10 +185,17 @@ export function calcTasaNoShow(reservations: Reservation[]): number {
   return Math.round((noShows / relevantes.length) * 1000) / 10;
 }
 
-export function calcFijasLiberadasVsBloqueadas(spots: ParkingSpot[]): FijasLiberadasVsBloqueadas {
-  const fijas = spots.filter((s) => s.tipo === "fija");
+export function calcFijasLiberadasVsBloqueadas(
+  spots: ParkingSpot[],
+  fixedSpotReleases: FixedSpotRelease[]
+): FijasLiberadasVsBloqueadas {
+  // "Liberada" = hoy cae dentro de un rango liberado activo (ver
+  // fixed_spot_releases); las fuera de servicio no cuentan como
+  // liberadas aunque tengan una liberación vigente.
+  const fijas = spots.filter((s) => s.tipo === "fija" && s.estado !== "fuera_de_servicio");
+  const liberadas = fijas.filter((s) => isSpotReleasedOnDate(fixedSpotReleases, s.id)).length;
   return {
-    liberadas: fijas.filter((s) => s.estado === "libre" || s.estado === "ocupada").length,
-    bloqueadas: fijas.filter((s) => s.estado === "bloqueada").length,
+    liberadas,
+    bloqueadas: fijas.length - liberadas,
   };
 }

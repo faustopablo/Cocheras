@@ -19,13 +19,15 @@ export function SpotCard({
   activeReservation,
   onReservar,
   esMia,
+  isReleasedToday,
 }: {
   spot: ParkingSpot;
   activeReservation?: Reservation | null;
   onReservar?: (spot: ParkingSpot) => void;
   esMia?: boolean;
+  isReleasedToday?: boolean;
 }) {
-  const estado = computeSpotDisplayStatus(spot, activeReservation);
+  const estado = computeSpotDisplayStatus(spot, activeReservation, isReleasedToday);
   const Icon = ICONS[estado];
   const puedeReservar = estado === "libre" && !esMia;
 
