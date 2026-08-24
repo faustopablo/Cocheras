@@ -21,9 +21,10 @@ export function Navbar({ profile }: { profile: Profile }) {
   const isAdmin = profile.rol === "admin";
   const isAdminSection = pathname.startsWith("/admin");
 
-  const linkClass = (href: string) =>
+  const linkClass = (href: string, mobile = false) =>
     cn(
-      "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+      "focus-ring rounded-md px-3 text-sm font-medium transition-colors",
+      mobile ? "py-3" : "py-2",
       pathname === href
         ? "bg-white/15 text-white"
         : "text-white/80 hover:bg-white/10 hover:text-white"
@@ -50,7 +51,7 @@ export function Navbar({ profile }: { profile: Profile }) {
                 <Link
                   href="/admin"
                   className={cn(
-                    "flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    "focus-ring flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                     isAdminSection
                       ? "bg-white/15 text-white"
                       : "text-white/80 hover:bg-white/10 hover:text-white"
@@ -83,11 +84,12 @@ export function Navbar({ profile }: { profile: Profile }) {
         </div>
 
         <button
-          className="focus-ring rounded-md p-2 text-white md:hidden"
+          className="focus-ring flex h-11 w-11 items-center justify-center rounded-md text-white transition-colors hover:bg-white/10 md:hidden"
           onClick={() => setOpen((v) => !v)}
-          aria-label="Abrir menú"
+          aria-label={open ? "Cerrar menú" : "Abrir menú"}
+          aria-expanded={open}
         >
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          {open ? <X className="h-5 w-5" aria-hidden /> : <Menu className="h-5 w-5" aria-hidden />}
         </button>
       </div>
 
@@ -95,7 +97,12 @@ export function Navbar({ profile }: { profile: Profile }) {
         <div className="border-t border-white/10 px-4 pb-4 md:hidden">
           <nav className="flex flex-col gap-1 pt-2">
             {NAV_LINKS.map((l) => (
-              <Link key={l.href} href={l.href} className={linkClass(l.href)} onClick={() => setOpen(false)}>
+              <Link
+                key={l.href}
+                href={l.href}
+                className={linkClass(l.href, true)}
+                onClick={() => setOpen(false)}
+              >
                 {l.label}
               </Link>
             ))}
@@ -105,7 +112,7 @@ export function Navbar({ profile }: { profile: Profile }) {
                   href="/admin"
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    "focus-ring flex items-center gap-2 rounded-md px-3 py-3 text-sm font-medium transition-colors",
                     isAdminSection
                       ? "bg-white/15 text-white"
                       : "text-white/80 hover:bg-white/10 hover:text-white"

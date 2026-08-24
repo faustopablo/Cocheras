@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createGuestReservationAction } from "@/app/actions/guests";
-import { toLocalDateValue } from "@/lib/utils";
+import { hoyArgentina } from "@/lib/utils";
 import type { ParkingSpot } from "@/lib/database.types";
 
 export function GuestForm({ availableSpots }: { availableSpots: ParkingSpot[] }) {
@@ -17,7 +17,7 @@ export function GuestForm({ availableSpots }: { availableSpots: ParkingSpot[] })
   const [empresa, setEmpresa] = useState("");
   const [patente, setPatente] = useState("");
   const [spotId, setSpotId] = useState<string>("");
-  const [fecha, setFecha] = useState(() => toLocalDateValue(new Date()));
+  const [fecha, setFecha] = useState(() => hoyArgentina());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -84,9 +84,15 @@ export function GuestForm({ availableSpots }: { availableSpots: ParkingSpot[] })
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="g-spot">Cochera</Label>
-              <Select value={spotId} onValueChange={setSpotId}>
+              <Select value={spotId} onValueChange={setSpotId} disabled={availableSpots.length === 0}>
                 <SelectTrigger id="g-spot">
-                  <SelectValue placeholder="Elegir cochera disponible" />
+                  <SelectValue
+                    placeholder={
+                      availableSpots.length === 0
+                        ? "No hay cocheras libres ahora"
+                        : "Elegir cochera disponible"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {availableSpots.map((s) => (
@@ -96,13 +102,18 @@ export function GuestForm({ availableSpots }: { availableSpots: ParkingSpot[] })
                   ))}
                 </SelectContent>
               </Select>
+              {availableSpots.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Cuando se libere una cochera vas a poder elegirla acá.
+                </p>
+              )}
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="g-fecha">Fecha</Label>
               <Input
                 id="g-fecha"
                 type="date"
-                min={toLocalDateValue(new Date())}
+                min={hoyArgentina()}
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
               />
@@ -120,8 +131,8 @@ export function GuestForm({ availableSpots }: { availableSpots: ParkingSpot[] })
             </p>
           )}
 
-          <Button type="submit" disabled={loading} className="self-start">
-            {loading ? "Guardando..." : "Registrar reserva de invitado"}
+          <Button type="submit" disabled={loading || availableSpots.length === 0} className="self-start">
+            {loading ? "Registrando..." : "Registrar reserva de invitado"}
           </Button>
         </form>
       </CardContent>

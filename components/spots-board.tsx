@@ -22,6 +22,8 @@ import {
   formatDate,
   formatDateShort,
   formatDias,
+  hoyArgentina,
+  hoyArgentinaDate,
   isSameLocalDate,
   startOfIsoWeek,
   toLocalDateValue,
@@ -58,13 +60,14 @@ export function SpotsBoard({
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingReleaseId, setPendingReleaseId] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  // "Hoy" en hora argentina (no la del navegador/servidor): es la fecha
+  // contra la que validan las reservas.
+  const [selectedDate, setSelectedDate] = useState(() => hoyArgentinaDate());
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [expandedBuildings, setExpandedBuildings] = useState<Record<string, boolean>>({});
   const [expandedLevels, setExpandedLevels] = useState<Record<string, boolean>>({});
 
-  const hoy = useMemo(() => new Date(), []);
-  const esHoy = isSameLocalDate(selectedDate, hoy);
+  const esHoy = toLocalDateValue(selectedDate) === hoyArgentina();
 
   // Las reservas son diarias: se indexan por cochera + fecha exacta para
   // poder proyectar cualquier día (no solo hoy) sin aproximaciones.
@@ -177,6 +180,11 @@ export function SpotsBoard({
 
   const semanaDeSeleccion = useMemo(() => startOfIsoWeek(selectedDate), [selectedDate]);
 
+  const totalLibres = useMemo(
+    () => spots.filter((s) => displayBySpotId.get(s.id)?.estado === "libre").length,
+    [spots, displayBySpotId]
+  );
+
   async function handleCancelarLiberacion(releaseId: string) {
     if (!confirm("¿Cancelar esta liberación? Las reservas que otros hayan hecho dentro del rango no se cancelan automáticamente.")) {
       return;
@@ -185,6 +193,7 @@ export function SpotsBoard({
     const res = await cancelFixedSpotReleaseAction(releaseId);
     setPendingReleaseId(null);
     if (res.ok) router.refresh();
+    else alert(res.error ?? "No se pudo cancelar la liberación. Volvé a intentarlo.");
   }
 
   return (
@@ -269,7 +278,7 @@ export function SpotsBoard({
                             disabled={pendingReleaseId === r.id}
                             onClick={() => handleCancelarLiberacion(r.id)}
                           >
-                            Cancelar
+                            {pendingReleaseId === r.id ? "Cancelando..." : "Cancelar"}
                           </Button>
                         </div>
                       ))}
@@ -285,6 +294,32 @@ export function SpotsBoard({
             })}
           </CardContent>
         </Card>
+      )}
+
+      {buildings.length === 0 && (
+        <div className="flex flex-col items-center gap-1 rounded-xl border border-dashed border-border bg-card px-6 py-12 text-center">
+          <p className="text-sm font-semibold text-foreground">Todavía no hay cocheras cargadas</p>
+          <p className="text-sm text-muted-foreground">
+            Cuando administración dé de alta los edificios y sus cocheras, vas a poder reservarlas
+            desde acá.
+          </p>
+        </div>
+      )}
+
+      {filtro === "libres" && buildings.length > 0 && totalLibres === 0 && (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border bg-card px-6 py-12 text-center">
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              No hay cocheras libres para el {formatDateShort(selectedDate)}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Probá con otra fecha, o mirá el estado completo del día.
+            </p>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={() => setFiltro("todos")}>
+            Ver todas las cocheras
+          </Button>
+        </div>
       )}
 
       {buildings.map((building) => {
@@ -421,8 +456,6 @@ function BoardToolbar({
   onExpandirTodo: () => void;
   onContraerTodo: () => void;
 }) {
-  const hoy = new Date();
-
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 sm:p-4">
       <div className="flex items-center justify-between gap-2">
@@ -431,7 +464,7 @@ function BoardToolbar({
           variant="outline"
           size="icon"
           aria-label="Día anterior"
-          disabled={isSameLocalDate(selectedDate, hoy)}
+          disabled={toLocalDateValue(selectedDate) <= hoyArgentina()}
           onClick={() => onDateChange(addDays(selectedDate, -1))}
         >
           <ChevronLeft className="h-4 w-4" aria-hidden />
@@ -457,22 +490,26 @@ function BoardToolbar({
         </Button>
       </div>
 
-      <div className="flex items-center justify-center gap-1.5">
+      <div className="flex items-center justify-center gap-1 sm:gap-1.5">
         {DIAS_SEMANA.map((d) => {
           const diaDate = addDays(semanaDeSeleccion, d.value - 1);
           const activo = isSameLocalDate(diaDate, selectedDate);
+          // Los días ya pasados de la semana no se pueden reservar.
+          const pasado = toLocalDateValue(diaDate) < hoyArgentina();
           return (
             <button
               key={d.value}
               type="button"
               onClick={() => onDateChange(diaDate)}
+              disabled={pasado}
               aria-pressed={activo}
-              aria-label={d.label}
+              aria-label={pasado ? `${d.label} (fecha pasada)` : d.label}
               className={cn(
-                "focus-ring flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors",
+                "focus-ring flex h-11 w-11 items-center justify-center rounded-full text-xs font-bold transition-colors sm:h-9 sm:w-9",
                 activo
                   ? "bg-comafi-verde-claro text-white"
-                  : "bg-muted text-muted-foreground hover:bg-accent"
+                  : "bg-muted text-muted-foreground hover:bg-accent",
+                pasado && "cursor-not-allowed opacity-40 hover:bg-muted"
               )}
             >
               {d.corta}
@@ -486,22 +523,28 @@ function BoardToolbar({
           <button
             type="button"
             onClick={() => onFiltroChange("todos")}
+            aria-pressed={filtro === "todos"}
             className={cn(
-              "focus-ring rounded-full px-3 py-1 text-xs font-semibold transition-colors",
-              filtro === "todos" ? "bg-comafi-negro-verdoso text-white" : "text-muted-foreground"
+              "focus-ring rounded-full px-4 py-2 text-xs font-semibold transition-colors sm:py-1.5",
+              filtro === "todos"
+                ? "bg-comafi-negro-verdoso text-white"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
-            Todos
+            Todas
           </button>
           <button
             type="button"
             onClick={() => onFiltroChange("libres")}
+            aria-pressed={filtro === "libres"}
             className={cn(
-              "focus-ring rounded-full px-3 py-1 text-xs font-semibold transition-colors",
-              filtro === "libres" ? "bg-comafi-verde-claro text-white" : "text-muted-foreground"
+              "focus-ring rounded-full px-4 py-2 text-xs font-semibold transition-colors sm:py-1.5",
+              filtro === "libres"
+                ? "bg-comafi-verde-claro text-white"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
-            Libres
+            Solo libres
           </button>
         </div>
 
@@ -535,7 +578,7 @@ function EstadosLeyenda() {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border pt-2">
       {items.map((item) => (
-        <span key={item.label} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <span key={item.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span className={cn("h-3 w-3 shrink-0 rounded-full", item.className)} aria-hidden />
           {item.label}
         </span>

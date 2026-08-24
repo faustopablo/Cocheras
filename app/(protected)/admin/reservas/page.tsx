@@ -21,9 +21,10 @@ export default async function AdminReservasPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Reservas — vista global</h1>
-        <p className="text-sm text-muted-foreground">
-          Filtrá por estado o edificio, cancelá o reasigná reservas activas.
+        <h1 className="text-2xl font-bold text-foreground">Reservas</h1>
+        <p className="mt-1 max-w-prose text-sm text-muted-foreground">
+          Todas las reservas de la organización. Filtrá por estado o edificio, y cancelá o
+          reasigná las activas.
         </p>
       </div>
       <AdminReservationsTable

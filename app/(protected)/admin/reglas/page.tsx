@@ -22,7 +22,7 @@ export default async function AdminReglasPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Reglas de reserva</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="mt-1 max-w-prose text-sm text-muted-foreground">
           Definí límites globales y particulares por edificio.
         </p>
       </div>

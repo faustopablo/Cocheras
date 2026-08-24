@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { SpotsBoard } from "@/components/spots-board";
+import { hoyArgentina } from "@/lib/utils";
 import type {
   Building,
   FixedSpotAssignment,
@@ -35,7 +36,7 @@ export default async function HomePage() {
       .from("fixed_spot_releases")
       .select("*")
       .eq("estado", "activa")
-      .gte("fecha_hasta", new Date().toISOString().slice(0, 10))
+      .gte("fecha_hasta", hoyArgentina())
       .order("fecha_desde"),
   ]);
 
@@ -43,10 +44,10 @@ export default async function HomePage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Cocheras disponibles</h1>
-        <p className="text-sm text-muted-foreground">
-          Estado en vivo por edificio y subsuelo. Los cambios de otros usuarios se reflejan
-          automáticamente. Elegí otra fecha para ver la disponibilidad exacta de ese día: las
-          reservas son por día completo, así que se proyectan igual de precisas a futuro.
+        <p className="mt-1 max-w-prose text-sm text-muted-foreground">
+          Estado en vivo por edificio y subsuelo; los cambios de otros usuarios se reflejan
+          automáticamente. Las reservas son por día completo: elegí otra fecha para ver la
+          disponibilidad exacta de ese día.
         </p>
       </div>
       <SpotsBoard

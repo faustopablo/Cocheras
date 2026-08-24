@@ -110,8 +110,8 @@ export function SpotsManager({
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex-1">
-              <Label>Edificio</Label>
+            <div className="flex flex-1 flex-col gap-2">
+              <Label htmlFor="f-edificio">Edificio</Label>
               <Select
                 value={buildingFilter}
                 onValueChange={(v) => {
@@ -119,7 +119,7 @@ export function SpotsManager({
                   setLevelFilter(ALL);
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger id="f-edificio">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -132,10 +132,10 @@ export function SpotsManager({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex-1">
-              <Label>Subsuelo</Label>
+            <div className="flex flex-1 flex-col gap-2">
+              <Label htmlFor="f-subsuelo">Subsuelo</Label>
               <Select value={levelFilter} onValueChange={setLevelFilter}>
-                <SelectTrigger>
+                <SelectTrigger id="f-subsuelo">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -221,12 +221,15 @@ function SpotRow({
 }) {
   const router = useRouter();
   const profileById = useMemo(() => new Map(profiles.map((p) => [p.id, p])), [profiles]);
+  const [deleting, setDeleting] = useState(false);
 
   async function handleDelete() {
     if (!confirm(`¿Eliminar la cochera ${spot.codigo}?`)) return;
+    setDeleting(true);
     const res = await deleteSpotAction(spot.id);
+    setDeleting(false);
     if (res.ok) router.refresh();
-    else alert(res.error);
+    else alert(res.error ?? "No se pudo eliminar la cochera. Volvé a intentarlo.");
   }
 
   return (
@@ -274,20 +277,24 @@ function SpotRow({
             }
             return <Badge variant="muted">Sin asignar</Badge>;
           }
-          return <Badge variant="outline">{spot.estado}</Badge>;
+          return (
+            <Badge variant={ESTADO_BADGE_VARIANT[spot.estado]}>{ESTADO_LABEL[spot.estado]}</Badge>
+          );
         })()}
       </TableCell>
-      <TableCell className="flex gap-2">
-        <SpotFormDialog
-          building={building}
-          level={level}
-          spot={spot}
-          profiles={profiles}
-          assignments={assignments}
-        />
-        <Button size="sm" variant="ghost" onClick={handleDelete}>
-          Eliminar
-        </Button>
+      <TableCell>
+        <div className="flex justify-end gap-2">
+          <SpotFormDialog
+            building={building}
+            level={level}
+            spot={spot}
+            profiles={profiles}
+            assignments={assignments}
+          />
+          <Button size="sm" variant="ghost" disabled={deleting} onClick={handleDelete}>
+            {deleting ? "Eliminando..." : "Eliminar"}
+          </Button>
+        </div>
       </TableCell>
     </TableRow>
   );
@@ -345,14 +352,14 @@ function SpotFormDialog({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <Label>Código</Label>
-            <Input value={codigo} onChange={(e) => setCodigo(e.target.value)} required />
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="spot-codigo">Código</Label>
+            <Input id="spot-codigo" value={codigo} onChange={(e) => setCodigo(e.target.value)} required />
           </div>
-          <div>
-            <Label>Tipo</Label>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="spot-tipo">Tipo</Label>
             <Select value={tipo} onValueChange={(v) => setTipo(v as TipoCochera)}>
-              <SelectTrigger>
+              <SelectTrigger id="spot-tipo">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -362,10 +369,10 @@ function SpotFormDialog({
             </Select>
           </div>
           {spot && (
-            <div>
-              <Label>Estado</Label>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="spot-estado">Estado</Label>
               <Select value={estado} onValueChange={(v) => setEstado(v as EstadoCochera)}>
-                <SelectTrigger>
+                <SelectTrigger id="spot-estado">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

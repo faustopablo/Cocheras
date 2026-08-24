@@ -17,7 +17,7 @@ export default async function AdminEdificiosPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Edificios</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="mt-1 max-w-prose text-sm text-muted-foreground">
           ABM de edificios y subsuelos. Para dar de alta o editar cocheras, entrá a{" "}
           <span className="font-medium">Gestionar cocheras</span> dentro de cada edificio.
         </p>

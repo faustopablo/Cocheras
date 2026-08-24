@@ -34,35 +34,30 @@ export function SpotCard({
   const libre = estado === "libre" && !esMia;
   const puedeReservar = estado === "libre" && !esMia;
 
-  function handleClick() {
-    if (puedeReservar && onReservar) {
-      onReservar(spot);
-      return;
-    }
-    if (fueraDeServicio) return;
-    if (reservadaPorOtro) {
-      alert(`Cochera ${spot.codigo}: reservada por otro colaborador este día.`);
-      return;
-    }
-    if (asignadaAOtro) {
-      alert(
-        `Cochera ${spot.codigo}: es una cochera fija asignada a otro colaborador este día y no fue liberada.`
-      );
-    }
-  }
-
-  const esClickeable = puedeReservar || reservadaPorOtro || ocupadaPorOtro;
+  // El estado de las no reservables ya se comunica en la propia tarjeta
+  // (color + chip "Asignada"/"Ocupada"); el title amplía el detalle al hover.
+  const title = fueraDeServicio
+    ? `${spot.codigo} · fuera de servicio`
+    : reservadaPorOtro
+      ? `${spot.codigo} · reservada por otro colaborador este día`
+      : asignadaAOtro
+        ? `${spot.codigo} · cochera fija asignada a otro colaborador este día (no liberada)`
+        : spot.tipo === "fija"
+          ? `${spot.codigo} · cochera fija`
+          : spot.codigo;
 
   return (
     <button
       type="button"
-      onClick={handleClick}
-      disabled={!esClickeable}
-      title={spot.tipo === "fija" ? `${spot.codigo} · cochera fija` : spot.codigo}
+      onClick={() => {
+        if (puedeReservar && onReservar) onReservar(spot);
+      }}
+      disabled={!puedeReservar}
+      title={title}
       className={cn(
         "focus-ring group relative flex aspect-[3/4] w-full flex-col items-center justify-center gap-1 rounded-[1.5rem] border-2 p-2 text-center transition-transform",
-        esClickeable && "cursor-pointer hover:scale-[1.03] active:scale-[0.98]",
-        !esClickeable && "cursor-default",
+        puedeReservar && "cursor-pointer hover:scale-[1.03] active:scale-[0.98]",
+        !puedeReservar && "cursor-default",
         // Libre: blanco con borde verde Comafi.
         libre && "border-comafi-verde-claro bg-white",
         // Mía (reserva puntual propia, o mi día fijo no liberado).
@@ -80,7 +75,7 @@ export function SpotCard({
       {spot.tipo === "fija" && (
         <span
           className={cn(
-            "absolute right-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide",
+            "absolute right-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
             esMia || ocupadaPorOtro ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
           )}
         >
@@ -89,12 +84,12 @@ export function SpotCard({
       )}
 
       {asignadaAOtro && (
-        <span className="absolute left-1.5 top-1.5 rounded-full bg-white/20 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white">
+        <span className="absolute left-1.5 top-1.5 rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
           Asignada
         </span>
       )}
       {reservadaPorOtro && (
-        <span className="absolute left-1.5 top-1.5 rounded-full bg-white/20 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white">
+        <span className="absolute left-1.5 top-1.5 rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
           Ocupada
         </span>
       )}
@@ -124,10 +119,10 @@ export function SpotCard({
       </span>
 
       {esReservaPropia && reservaActiva && (
-        <span className="text-[10px] font-semibold text-white/90">Tu reserva</span>
+        <span className="text-[10px] font-semibold text-white">Tu reserva</span>
       )}
       {esMia && !esReservaPropia && (
-        <span className="text-[10px] font-semibold text-white/90">Tu día</span>
+        <span className="text-[10px] font-semibold text-white">Tu día</span>
       )}
     </button>
   );

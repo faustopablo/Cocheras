@@ -73,7 +73,7 @@ export default async function AdminEstadisticasPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Estadísticas</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="mt-1 max-w-prose text-sm text-muted-foreground">
           KPIs de uso de las cocheras. Cada gráfico incluye una vista de tabla accesible.
         </p>
       </div>

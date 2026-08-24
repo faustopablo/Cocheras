@@ -22,8 +22,9 @@
   --accent-foreground: var(--comafi-negro-verdoso);
   --destructive: #b3261e;
   --destructive-foreground: #ffffff;
-  --success: #1a8f5e;
-  --warning: #b9770e;
+  /* Éxito/advertencia oscurecidos para sostener ≥4.5:1 con texto blanco. */
+  --success: #157a50;
+  --warning: #96620a;
   --ring: var(--comafi-verde-claro);
   --radius: 0.6rem;
 }
@@ -71,4 +72,36 @@ body {
 .focus-ring:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+/* Único momento de motion intencional: apertura de diálogos (ease-out, breve). */
+@keyframes dialog-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes dialog-content-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+.dialog-overlay-in[data-state="open"] {
+  animation: dialog-overlay-in 150ms cubic-bezier(0, 0, 0.2, 1);
+}
+.dialog-content-in[data-state="open"] {
+  animation: dialog-content-in 180ms cubic-bezier(0, 0, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog-overlay-in[data-state="open"],
+  .dialog-content-in[data-state="open"] {
+    animation: none;
+  }
 }

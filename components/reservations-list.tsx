@@ -1,28 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
+import { ESTADO_RESERVA_LABEL, ESTADO_RESERVA_VARIANT } from "@/components/user-profile-sections";
 import { cancelReservationAction } from "@/app/actions/reservations";
-import type { ReservationWithRelations, EstadoReserva } from "@/lib/database.types";
-
-const ESTADO_VARIANT: Record<EstadoReserva, "success" | "muted" | "destructive" | "warning"> = {
-  activa: "success",
-  completada: "muted",
-  cancelada: "destructive",
-  no_show: "warning",
-};
-
-const ESTADO_LABEL: Record<EstadoReserva, string> = {
-  activa: "Activa",
-  completada: "Completada",
-  cancelada: "Cancelada",
-  no_show: "No-show",
-};
+import type { ReservationWithRelations } from "@/lib/database.types";
 
 export function ReservationsList({
   activas,
@@ -34,12 +22,13 @@ export function ReservationsList({
   const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  async function run(id: string, fn: (id: string) => Promise<{ ok: boolean; error?: string }>) {
-    setLoadingId(id);
-    const res = await fn(id);
+  async function handleCancelar(r: ReservationWithRelations) {
+    if (!confirm(`¿Cancelar tu reserva de ${r.spot?.codigo} del ${formatDate(r.fecha)}?`)) return;
+    setLoadingId(r.id);
+    const res = await cancelReservationAction(r.id);
     setLoadingId(null);
     if (res.ok) router.refresh();
-    else alert(res.error ?? "Ocurrió un error.");
+    else alert(res.error ?? "No se pudo cancelar la reserva. Volvé a intentarlo.");
   }
 
   return (
@@ -50,7 +39,14 @@ export function ReservationsList({
         </CardHeader>
         <CardContent>
           {activas.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No tenés reservas activas.</p>
+            <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-border px-6 py-10 text-center">
+              <p className="text-sm text-muted-foreground">
+                No tenés reservas activas. Elegí una cochera libre en el mapa para reservarla.
+              </p>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/">Ir al mapa de cocheras</Link>
+              </Button>
+            </div>
           ) : (
             <div className="flex flex-col gap-3">
               {activas.map((r) => (
@@ -69,9 +65,9 @@ export function ReservationsList({
                       size="sm"
                       variant="outline"
                       disabled={loadingId === r.id}
-                      onClick={() => run(r.id, cancelReservationAction)}
+                      onClick={() => handleCancelar(r)}
                     >
-                      Cancelar
+                      {loadingId === r.id ? "Cancelando..." : "Cancelar"}
                     </Button>
                   </div>
                 </div>
@@ -87,7 +83,9 @@ export function ReservationsList({
         </CardHeader>
         <CardContent>
           {historial.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Todavía no tenés historial.</p>
+            <p className="text-sm text-muted-foreground">
+              Todavía no tenés historial: tus reservas completadas o canceladas van a aparecer acá.
+            </p>
           ) : (
             <Table>
               <TableHeader>
@@ -105,7 +103,9 @@ export function ReservationsList({
                     <TableCell>{r.spot?.building?.nombre}</TableCell>
                     <TableCell>{formatDate(r.fecha)}</TableCell>
                     <TableCell>
-                      <Badge variant={ESTADO_VARIANT[r.estado]}>{ESTADO_LABEL[r.estado]}</Badge>
+                      <Badge variant={ESTADO_RESERVA_VARIANT[r.estado]}>
+                        {ESTADO_RESERVA_LABEL[r.estado]}
+                      </Badge>
                     </TableCell>
                   </TableRow>
                 ))}

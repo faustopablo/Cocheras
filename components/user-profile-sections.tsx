@@ -70,7 +70,7 @@ export function DiasChipsReadonly({ dias }: { dias: number[] }) {
               "flex h-7 w-7 items-center justify-center rounded-full border text-xs font-semibold",
               seleccionado
                 ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-muted text-muted-foreground opacity-50"
+                : "border-border bg-muted text-muted-foreground"
             )}
           >
             {d.corta}
