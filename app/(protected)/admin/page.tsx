@@ -47,7 +47,7 @@ const ADMIN_CARDS: AdminCard[] = [
   {
     href: "/admin/reglas",
     title: "Reglas",
-    description: "Límites de anticipación, duración y tolerancia de no-show.",
+    description: "Límites de anticipación y reservas simultáneas por usuario.",
     icon: SlidersHorizontal,
   },
   {

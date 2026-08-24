@@ -24,7 +24,7 @@ export default async function ReservasPage() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">Mis reservas</h1>
         <p className="text-sm text-muted-foreground">
-          Gestioná el check-in / check-out y cancelá reservas si cambian tus planes.
+          Consultá tus reservas del día y cancelalas si cambian tus planes.
         </p>
       </div>
       <ReservationsList activas={activas} historial={historial} />

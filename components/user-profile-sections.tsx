@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { cn, DIAS_SEMANA, formatDate, formatDateTime } from "@/lib/utils";
+import { cn, DIAS_SEMANA, formatDate } from "@/lib/utils";
 import type {
   Building,
   EstadoLiberacion,
@@ -208,8 +208,6 @@ export function HistorialReservasSection({
                   <TableHead>Fecha</TableHead>
                   <TableHead>Origen</TableHead>
                   <TableHead>Estado</TableHead>
-                  <TableHead>Check-in</TableHead>
-                  <TableHead>Check-out</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -230,8 +228,6 @@ export function HistorialReservasSection({
                         {ESTADO_RESERVA_LABEL[r.estado]}
                       </Badge>
                     </TableCell>
-                    <TableCell>{formatDateTime(r.check_in_at)}</TableCell>
-                    <TableCell>{formatDateTime(r.check_out_at)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

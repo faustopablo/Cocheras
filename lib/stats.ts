@@ -174,13 +174,20 @@ export function calcRankingCocheras(
   };
 }
 
-export function calcTasaNoShow(reservations: Reservation[]): number {
+/**
+ * Tasa de cancelación: proporción de reservas canceladas sobre el total
+ * de reservas "cerradas" (canceladas + completadas + activas). Sustituye
+ * a la antigua "tasa de no-show" ahora que la reserva confirmada equivale
+ * a check-in automático y ya no se liberan reservas por falta de
+ * check-in.
+ */
+export function calcTasaCancelacion(reservations: Reservation[]): number {
   const relevantes = reservations.filter(
-    (r) => r.estado === "no_show" || r.estado === "completada" || r.estado === "activa"
+    (r) => r.estado === "cancelada" || r.estado === "completada" || r.estado === "activa"
   );
   if (relevantes.length === 0) return 0;
-  const noShows = relevantes.filter((r) => r.estado === "no_show").length;
-  return Math.round((noShows / relevantes.length) * 1000) / 10;
+  const canceladas = relevantes.filter((r) => r.estado === "cancelada").length;
+  return Math.round((canceladas / relevantes.length) * 1000) / 10;
 }
 
 export function calcFijasLiberadasVsBloqueadas(

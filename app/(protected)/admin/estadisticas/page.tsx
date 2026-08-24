@@ -7,11 +7,11 @@ import {
   calcRankingCocheras,
   calcRotacionPorJerarquia,
   calcRotacionPorUsuario,
-  calcTasaNoShow,
+  calcTasaCancelacion,
 } from "@/lib/stats";
 import {
+  CancelacionStat,
   FijasLiberadasChart,
-  NoShowStat,
   OcupacionPorDiaSemanaChart,
   OcupacionPorEdificioChart,
   OcupacionPorSubsueloChart,
@@ -66,7 +66,7 @@ export default async function AdminEstadisticasPage() {
   const rotacionJerarquia = calcRotacionPorJerarquia(p, r);
   const rotacionUsuario = calcRotacionPorUsuario(p, r);
   const ranking = calcRankingCocheras(s, b, r);
-  const tasaNoShow = calcTasaNoShow(r);
+  const tasaCancelacion = calcTasaCancelacion(r);
   const fijas = calcFijasLiberadasVsBloqueadas(s, fa, fr);
 
   return (
@@ -88,7 +88,7 @@ export default async function AdminEstadisticasPage() {
       <RankingCocherasChart masUsadas={ranking.masUsadas} menosUsadas={ranking.menosUsadas} />
 
       <div className="grid gap-4 md:grid-cols-2">
-        <NoShowStat tasa={tasaNoShow} />
+        <CancelacionStat tasa={tasaCancelacion} />
         <FijasLiberadasChart data={fijas} />
       </div>
 

@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDate, formatDateTime } from "@/lib/utils";
-import { checkInAction, checkOutAction, cancelReservationAction } from "@/app/actions/reservations";
+import { formatDate } from "@/lib/utils";
+import { cancelReservationAction } from "@/app/actions/reservations";
 import type { ReservationWithRelations, EstadoReserva } from "@/lib/database.types";
 
 const ESTADO_VARIANT: Record<EstadoReserva, "success" | "muted" | "destructive" | "warning"> = {
@@ -63,30 +63,8 @@ export function ReservationsList({
                       {r.spot?.codigo} · {r.spot?.building?.nombre}
                     </p>
                     <p className="text-sm text-muted-foreground">{formatDate(r.fecha)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Check-in: {r.check_in_at ? formatDateTime(r.check_in_at) : "pendiente"}
-                    </p>
                   </div>
                   <div className="flex gap-2">
-                    {!r.check_in_at && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        disabled={loadingId === r.id}
-                        onClick={() => run(r.id, checkInAction)}
-                      >
-                        Check-in
-                      </Button>
-                    )}
-                    {r.check_in_at && !r.check_out_at && (
-                      <Button
-                        size="sm"
-                        disabled={loadingId === r.id}
-                        onClick={() => run(r.id, checkOutAction)}
-                      >
-                        Check-out
-                      </Button>
-                    )}
                     <Button
                       size="sm"
                       variant="outline"

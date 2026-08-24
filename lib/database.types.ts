@@ -6,6 +6,12 @@ export type Jerarquia = "directivo" | "gerente" | "colaborador";
 export type TipoCochera = "fija" | "libre";
 export type EstadoCochera = "libre" | "ocupada" | "bloqueada" | "fuera_de_servicio";
 export type OrigenReserva = "fija_liberada" | "libre" | "invitado";
+/**
+ * "no_show" queda en el enum por compatibilidad con datos históricos
+ * (reservas liberadas por falta de check-in cuando ese concepto existía),
+ * pero desde que la reserva confirmada equivale a check-in automático
+ * ninguna función ni acción de la app vuelve a producirlo.
+ */
 export type EstadoReserva = "activa" | "cancelada" | "completada" | "no_show";
 export type EstadoLiberacion = "activa" | "cancelada";
 export type TipoNotificacion =
@@ -69,8 +75,6 @@ export interface Reservation {
   /** Fecha (día completo) de la reserva. yyyy-MM-dd. */
   fecha: string;
   estado: EstadoReserva;
-  check_in_at: string | null;
-  check_out_at: string | null;
   created_by: string | null;
   created_at: string;
 }
@@ -99,8 +103,6 @@ export interface ParkingRule {
   building_id: string | null;
   dias_max_reserva_futura: number;
   max_reservas_simultaneas_por_usuario: number;
-  /** Hora límite (HH:mm) del día reservado para hacer check-in antes de liberarse como no-show. */
-  hora_limite_checkin: string;
 }
 
 export interface AppNotification {

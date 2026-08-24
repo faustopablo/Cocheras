@@ -8,8 +8,6 @@ export async function upsertRuleAction(input: {
   buildingId: string | null;
   diasMaxReservaFutura: number;
   maxReservasSimultaneasPorUsuario: number;
-  /** Hora límite (HH:mm) del día reservado para hacer check-in. */
-  horaLimiteCheckin: string;
 }): Promise<ActionResult> {
   const supabase = await createClient();
 
@@ -17,7 +15,6 @@ export async function upsertRuleAction(input: {
     building_id: input.buildingId,
     dias_max_reserva_futura: input.diasMaxReservaFutura,
     max_reservas_simultaneas_por_usuario: input.maxReservasSimultaneasPorUsuario,
-    hora_limite_checkin: input.horaLimiteCheckin,
   };
 
   // Postgres no considera NULL == NULL para el constraint UNIQUE(building_id),

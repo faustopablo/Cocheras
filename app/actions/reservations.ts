@@ -54,7 +54,6 @@ async function getEffectiveRule(buildingId: string): Promise<ParkingRule> {
       building_id: null,
       dias_max_reserva_futura: 14,
       max_reservas_simultaneas_por_usuario: 1,
-      hora_limite_checkin: "11:00",
     }
   );
 }
@@ -173,32 +172,6 @@ export async function cancelReservationAction(reservationId: string): Promise<Ac
   revalidatePath("/");
   revalidatePath("/reservas");
   revalidatePath("/admin/reservas");
-  return { ok: true };
-}
-
-export async function checkInAction(reservationId: string): Promise<ActionResult> {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("reservations")
-    .update({ check_in_at: new Date().toISOString() })
-    .eq("id", reservationId);
-
-  if (error) return { ok: false, error: "No se pudo registrar el check-in." };
-
-  revalidatePath("/reservas");
-  return { ok: true };
-}
-
-export async function checkOutAction(reservationId: string): Promise<ActionResult> {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("reservations")
-    .update({ check_out_at: new Date().toISOString(), estado: "completada" })
-    .eq("id", reservationId);
-
-  if (error) return { ok: false, error: "No se pudo registrar el check-out." };
-
-  revalidatePath("/reservas");
   return { ok: true };
 }
 

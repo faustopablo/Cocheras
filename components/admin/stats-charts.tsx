@@ -304,7 +304,7 @@ export function RankingCocherasChart({
   );
 }
 
-export function NoShowStat({ tasa }: { tasa: number }) {
+export function CancelacionStat({ tasa }: { tasa: number }) {
   const nivel = tasa >= 20 ? "critical" : tasa >= 10 ? "warning" : "good";
   const color = nivel === "critical" ? PALETTE.red : nivel === "warning" ? PALETTE.yellow : PALETTE.aqua;
   const texto = nivel === "critical" ? "Alta" : nivel === "warning" ? "Moderada" : "Baja";
@@ -312,8 +312,8 @@ export function NoShowStat({ tasa }: { tasa: number }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Tasa de no-show</CardTitle>
-        <CardDescription>% de reservas liberadas automáticamente por falta de check-in.</CardDescription>
+        <CardTitle>Tasa de cancelación</CardTitle>
+        <CardDescription>% de reservas canceladas por el usuario sobre el total de reservas cerradas.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-baseline gap-3">

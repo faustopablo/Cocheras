@@ -23,7 +23,6 @@ function RuleForm({
   const router = useRouter();
   const [dias, setDias] = useState(rule?.dias_max_reserva_futura ?? 14);
   const [maxSimultaneas, setMaxSimultaneas] = useState(rule?.max_reservas_simultaneas_por_usuario ?? 1);
-  const [horaLimite, setHoraLimite] = useState(rule?.hora_limite_checkin?.slice(0, 5) ?? "11:00");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -33,7 +32,6 @@ function RuleForm({
       buildingId,
       diasMaxReservaFutura: dias,
       maxReservasSimultaneasPorUsuario: maxSimultaneas,
-      horaLimiteCheckin: horaLimite,
     });
     setSaving(false);
     if (res.ok) router.refresh();
@@ -60,17 +58,6 @@ function RuleForm({
               value={maxSimultaneas}
               onChange={(e) => setMaxSimultaneas(Number(e.target.value))}
             />
-          </div>
-          <div>
-            <Label>Hora límite de check-in</Label>
-            <Input
-              type="time"
-              value={horaLimite}
-              onChange={(e) => setHoraLimite(e.target.value)}
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Si a esa hora del día reservado no hubo check-in, la reserva se libera automáticamente.
-            </p>
           </div>
           <Button type="submit" disabled={saving} className="sm:col-span-2 self-start">
             {saving ? "Guardando..." : "Guardar regla"}

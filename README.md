@@ -26,7 +26,7 @@ app/                         # App Router (Next.js)
   login/                     # Login público
   (protected)/               # Rutas que requieren sesión (layout con Navbar)
     page.tsx                 # "/" — mapa de cocheras en vivo
-    reservas/                # Mis reservas (check-in/out, cancelar)
+    reservas/                # Mis reservas (cancelar; sin check-in/out)
     invitados/                # Alta de invitados + listado de hoy
     admin/                   # Rutas solo-admin (guard server-side + middleware)
       page.tsx               # Hub de Administración (tarjetas a cada sección)
@@ -39,7 +39,7 @@ supabase/
   migrations/                # SQL: esquema, RLS, triggers, funciones
   seed.sql                   # Datos de ejemplo (2 edificios, ~15 cocheras)
   functions/
-    release-no-shows/        # Edge Function: libera reservas sin check-in
+    complete-past-reservations/  # Edge Function: completa reservas activas de días pasados
     send-email/               # Stub de envío de emails transaccionales
 ```
 
@@ -61,10 +61,12 @@ supabase link --project-ref <tu-project-ref>
 supabase db push          # aplica supabase/migrations/*.sql
 ```
 
-O manualmente: pegar el contenido de `supabase/migrations/0001_init.sql`,
-luego `0002_functions_and_cron.sql`, `0003_fixed_spot_releases.sql` y
-`0004_fixed_spot_assignments.sql` en el SQL Editor del dashboard, en ese
-orden exacto (cada migración asume que las anteriores ya corrieron).
+O manualmente: pegar el contenido de cada archivo de `supabase/migrations/`
+en el SQL Editor del dashboard, en orden numérico (`0001_init.sql`,
+`0002_functions_and_cron.sql`, `0003_fixed_spot_releases.sql`,
+`0004_fixed_spot_assignments.sql`, `0005_una_cochera_por_dia.sql`,
+`0006_sin_checkin.sql`), ya que cada migración asume que las anteriores ya
+corrieron.
 
 ### 3. Cargar datos de ejemplo (opcional)
 
@@ -117,31 +119,32 @@ npm run dev
 
 ## Automatización (Edge Functions + pg_cron)
 
-### Liberación automática de no-shows
+### Completado automático de reservas pasadas
 
-La función SQL `public.release_no_show_reservations()` (en
-`supabase/migrations/0002_functions_and_cron.sql`, adaptada al modelo diario
-por `0005_una_cochera_por_dia.sql`) libera las reservas `activa` sin
-check-in cuyo día reservado ya pasó, o que corresponden a hoy y ya se
-cruzó `parking_rules.hora_limite_checkin`, y crea una notificación in-app.
+Una reserva confirmada equivale a check-in automático: no existe una acción
+explícita de check-in/check-out ni el concepto de no-show. La función SQL
+`public.complete_past_reservations()` (en
+`supabase/migrations/0006_sin_checkin.sql`) simplemente marca como
+`completada` toda reserva `activa` cuya fecha ya pasó (`fecha < current_date`).
+Reemplaza a la antigua `release_no_show_reservations()` (eliminada en esa
+misma migración).
 
-Para programarla, habilitá las extensiones `pg_cron` y `pg_net` (Database >
-Extensions) y corré (ver comentarios completos en la migración):
+Para programarla, habilitá la extensión `pg_cron` (Database > Extensions) y
+corré una vez por día (ver comentarios completos en la migración):
 
 ```sql
 select cron.schedule(
-  'release-no-shows-sql',
-  '*/5 * * * *',
-  $$ select public.release_no_show_reservations(); $$
+  'complete-past-reservations-sql',
+  '5 0 * * *',
+  $$ select public.complete_past_reservations(); $$
 );
 ```
 
-También existe la Edge Function `supabase/functions/release-no-shows`, que
-hace lo mismo invocando la función SQL vía RPC — útil si en el futuro querés
-disparar además el envío de un email desde ahí. Deploy:
+También existe la Edge Function `supabase/functions/complete-past-reservations`,
+que hace lo mismo invocando la función SQL vía RPC. Deploy:
 
 ```bash
-supabase functions deploy release-no-shows
+supabase functions deploy complete-past-reservations
 ```
 
 ### Envío de emails transaccionales (pendiente de proveedor)
@@ -170,12 +173,17 @@ Puntos clave:
   recursión en las policies.
 - **Reservas diarias (no por franja horaria)**
   (`0005_una_cochera_por_dia.sql`): una reserva es una cochera + un día
-  completo (columna `reservations.fecha`), no un rango horario. `check_in_at`
-  / `check_out_at` siguen siendo timestamps puntuales dentro de ese día.
-  `parking_rules.horas_max_por_reserva` y `minutos_tolerancia_no_show` se
-  eliminaron; se reemplazan por `hora_limite_checkin` (hora del día): si al
-  llegar esa hora no hubo check-in, `release_no_show_reservations()` libera
-  la reserva.
+  completo (columna `reservations.fecha`), no un rango horario.
+- **Sin check-in/check-out** (`0006_sin_checkin.sql`): una reserva confirmada
+  equivale a check-in automático. No hay acción de check-in/check-out ni
+  concepto de no-show; `reservations.check_in_at`/`check_out_at` y
+  `parking_rules.hora_limite_checkin` se eliminaron junto con
+  `release_no_show_reservations()`. En su lugar, `complete_past_reservations()`
+  marca `completada` toda reserva `activa` cuya fecha ya pasó (pensada para
+  correr una vez por día vía `pg_cron`, ver sección de Automatización). El
+  valor `no_show` sigue existiendo en el enum `estado_reserva` solo por
+  compatibilidad con datos históricos; ninguna función ni acción de la app
+  vuelve a producirlo.
 - **Máximo una cochera por usuario por día** (`0005_una_cochera_por_dia.sql`):
   - Un índice único parcial `uq_reservations_user_fecha_activa` sobre
     `(user_id, fecha)` (solo para `estado = 'activa'` y `user_id` no nulo)

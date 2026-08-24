@@ -23,8 +23,9 @@ export function SpotCard({
   const { estado, esMia, esReservaPropia, reservaActiva } = display;
 
   const fueraDeServicio = estado === "fuera_de_servicio";
-  // "Ocupada": alguien tiene una reserva puntual activa (o check-in) sobre
-  // la cochera en este momento. "Asignada": es una cochera fija con dueño
+  // "Ocupada": alguien tiene una reserva puntual activa sobre la cochera
+  // ese día (la reserva confirmada equivale a check-in automático).
+  // "Asignada": es una cochera fija con dueño
   // asignado el día visto, que no la liberó, y nadie tiene reserva activa.
   // Ambas son "de otro" cuando no soy yo (si es mía se pinta como propia).
   const reservadaPorOtro = !esMia && estado === "ocupada";
