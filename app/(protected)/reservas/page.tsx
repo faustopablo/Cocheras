@@ -13,7 +13,7 @@ export default async function ReservasPage() {
     .from("reservations")
     .select("*, spot:parking_spots(*, building:buildings(*), level:levels(*))")
     .eq("user_id", user.id)
-    .order("fecha_inicio", { ascending: false });
+    .order("fecha", { ascending: false });
 
   const reservas = (data ?? []) as ReservationWithRelations[];
   const activas = reservas.filter((r) => r.estado === "activa");
@@ -23,8 +23,8 @@ export default async function ReservasPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Mis reservas</h1>
-        <p className="text-sm text-muted-foreground">
-          Gestioná el check-in / check-out y cancelá reservas si cambian tus planes.
+        <p className="mt-1 max-w-prose text-sm text-muted-foreground">
+          Consultá tus reservas del día y cancelalas si cambian tus planes.
         </p>
       </div>
       <ReservationsList activas={activas} historial={historial} />

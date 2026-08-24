@@ -47,8 +47,8 @@ export async function adminReassignReservationAction(input: {
   if (error) {
     return {
       ok: false,
-      error: error.message.includes("superpone")
-        ? "La cochera destino ya tiene una reserva activa que se superpone."
+      error: error.message.includes("reserva activa para ese día")
+        ? "La cochera destino ya tiene una reserva activa ese día."
         : "No se pudo reasignar la reserva.",
     };
   }

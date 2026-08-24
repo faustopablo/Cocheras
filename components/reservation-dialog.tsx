@@ -14,42 +14,37 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { createReservationAction } from "@/app/actions/reservations";
-import { toLocalInputValue } from "@/lib/utils";
+import { hoyArgentina, toLocalDateValue } from "@/lib/utils";
 import type { ParkingSpot } from "@/lib/database.types";
 
 export function ReservationDialog({
   spot,
   open,
   onOpenChange,
+  defaultDate,
 }: {
   spot: ParkingSpot | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Fecha propuesta por defecto (ej. la seleccionada en el tablero). Hoy si no se pasa. */
+  defaultDate?: Date;
 }) {
   const router = useRouter();
-  const [modo, setModo] = useState<"instantanea" | "programada">("instantanea");
-  const [inicio, setInicio] = useState(() => toLocalInputValue(new Date()));
-  const [fin, setFin] = useState(() =>
-    toLocalInputValue(new Date(Date.now() + 4 * 60 * 60 * 1000))
-  );
+  const [fecha, setFecha] = useState(() => toLocalDateValue(defaultDate ?? new Date()));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!spot) return null;
   const currentSpot = spot;
+  const minFecha = hoyArgentina();
 
   async function handleSubmit() {
     setLoading(true);
     setError(null);
 
-    const fechaInicio =
-      modo === "instantanea" ? new Date().toISOString() : new Date(inicio).toISOString();
-    const fechaFin = new Date(fin).toISOString();
-
     const result = await createReservationAction({
       spotId: currentSpot.id,
-      fechaInicio,
-      fechaFin,
+      fecha,
     });
 
     setLoading(false);
@@ -67,49 +62,19 @@ export function ReservationDialog({
         <DialogHeader>
           <DialogTitle>Reservar cochera {spot.codigo}</DialogTitle>
           <DialogDescription>
-            Elegí si querés usarla ahora mismo o programarla para más adelante.
+            Las reservas son por día completo: elegí la fecha que necesitás.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant={modo === "instantanea" ? "default" : "outline"}
-              onClick={() => setModo("instantanea")}
-              className="flex-1"
-            >
-              Instantánea
-            </Button>
-            <Button
-              type="button"
-              variant={modo === "programada" ? "default" : "outline"}
-              onClick={() => setModo("programada")}
-              className="flex-1"
-            >
-              Programada
-            </Button>
-          </div>
-
-          {modo === "programada" && (
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="inicio">Fecha y hora de inicio</Label>
-              <Input
-                id="inicio"
-                type="datetime-local"
-                value={inicio}
-                onChange={(e) => setInicio(e.target.value)}
-              />
-            </div>
-          )}
-
           <div className="flex flex-col gap-2">
-            <Label htmlFor="fin">Fecha y hora de fin</Label>
+            <Label htmlFor="fecha-reserva">Fecha</Label>
             <Input
-              id="fin"
-              type="datetime-local"
-              value={fin}
-              onChange={(e) => setFin(e.target.value)}
+              id="fecha-reserva"
+              type="date"
+              min={minFecha}
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
             />
           </div>
 

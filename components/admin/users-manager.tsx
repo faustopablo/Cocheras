@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,9 +59,10 @@ export function UsersManager({ profiles }: { profiles: Profile[] }) {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleCreate} className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Email corporativo</Label>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="u-email">Email corporativo</Label>
               <Input
+                id="u-email"
                 type="email"
                 placeholder="nombre.apellido@comafi.com.ar"
                 value={email}
@@ -68,14 +70,14 @@ export function UsersManager({ profiles }: { profiles: Profile[] }) {
                 required
               />
             </div>
-            <div>
-              <Label>Nombre completo</Label>
-              <Input value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="u-nombre">Nombre completo</Label>
+              <Input id="u-nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
             </div>
-            <div>
-              <Label>Rol</Label>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="u-rol">Rol</Label>
               <Select value={rol} onValueChange={(v) => setRol(v as Rol)}>
-                <SelectTrigger>
+                <SelectTrigger id="u-rol">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -84,10 +86,10 @@ export function UsersManager({ profiles }: { profiles: Profile[] }) {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Jerarquía</Label>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="u-jerarquia">Jerarquía</Label>
               <Select value={jerarquia} onValueChange={(v) => setJerarquia(v as Jerarquia)}>
-                <SelectTrigger>
+                <SelectTrigger id="u-jerarquia">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -97,9 +99,10 @@ export function UsersManager({ profiles }: { profiles: Profile[] }) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="sm:col-span-2">
-              <Label>Contraseña provisoria</Label>
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <Label htmlFor="u-password">Contraseña provisoria</Label>
               <Input
+                id="u-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -175,7 +178,14 @@ function UserRow({ profile }: { profile: Profile }) {
 
   return (
     <TableRow>
-      <TableCell className="font-medium">{profile.nombre}</TableCell>
+      <TableCell className="font-medium">
+        <Link
+          href={`/admin/usuarios/${profile.id}`}
+          className="focus-ring text-primary hover:underline"
+        >
+          {profile.nombre}
+        </Link>
+      </TableCell>
       <TableCell>{profile.email}</TableCell>
       <TableCell>
         <Select
@@ -186,7 +196,7 @@ function UserRow({ profile }: { profile: Profile }) {
           }}
           disabled={saving}
         >
-          <SelectTrigger className="h-8 w-32">
+          <SelectTrigger className="h-8 w-32" aria-label={`Rol de ${profile.nombre}`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -204,7 +214,7 @@ function UserRow({ profile }: { profile: Profile }) {
           }}
           disabled={saving}
         >
-          <SelectTrigger className="h-8 w-36">
+          <SelectTrigger className="h-8 w-36" aria-label={`Jerarquía de ${profile.nombre}`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -219,6 +229,7 @@ function UserRow({ profile }: { profile: Profile }) {
           <Switch
             checked={activo}
             disabled={saving}
+            aria-label={`Usuario activo: ${profile.nombre}`}
             onCheckedChange={(v) => {
               setActivo(v);
               persist({ activo: v });

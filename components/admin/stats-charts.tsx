@@ -17,8 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type {
   FijasLiberadasVsBloqueadas,
+  OcupacionPorDiaSemana,
   OcupacionPorEdificio,
-  OcupacionPorFranja,
   OcupacionPorSubsuelo,
   RankingCochera,
   RotacionPorJerarquia,
@@ -32,8 +32,6 @@ const PALETTE = {
   blue: "#2a78d6",
   orange: "#eb6834",
   aqua: "#1baf7a", // el más cercano al verde Comafi dentro de la paleta validada
-  yellow: "#eda100",
-  red: "#e34948",
 };
 
 const JERARQUIA_LABEL: Record<string, string> = {
@@ -47,11 +45,14 @@ function ChartCard({
   description,
   children,
   table,
+  hasData = true,
 }: {
   title: string;
   description?: string;
   children: React.ReactNode;
   table?: React.ReactNode;
+  /** Con false se muestra un estado vacío en lugar del gráfico. */
+  hasData?: boolean;
 }) {
   return (
     <Card>
@@ -60,10 +61,19 @@ function ChartCard({
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div className="h-64 w-full">{children}</div>
-        {table && (
+        {hasData ? (
+          <div className="h-64 w-full">{children}</div>
+        ) : (
+          <div className="flex h-64 w-full items-center justify-center rounded-md border border-dashed border-border">
+            <p className="max-w-xs px-4 text-center text-sm text-muted-foreground">
+              Todavía no hay datos suficientes. A medida que se registren reservas, este gráfico
+              se va a completar solo.
+            </p>
+          </div>
+        )}
+        {hasData && table && (
           <details className="text-sm">
-            <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+            <summary className="focus-ring cursor-pointer rounded-sm text-muted-foreground hover:text-foreground">
               Ver como tabla
             </summary>
             <div className="mt-2">{table}</div>
@@ -78,6 +88,7 @@ export function OcupacionPorEdificioChart({ data }: { data: OcupacionPorEdificio
   return (
     <ChartCard
       title="Ocupación por edificio"
+      hasData={data.length > 0}
       description="% de cocheras con reserva activa o completada sobre el total."
       table={
         <Table>
@@ -117,6 +128,7 @@ export function OcupacionPorSubsueloChart({ data }: { data: OcupacionPorSubsuelo
   return (
     <ChartCard
       title="Ocupación por subsuelo"
+      hasData={data.length > 0}
       description="Detalle de ocupación dentro de cada edificio."
       table={
         <Table>
@@ -152,23 +164,24 @@ export function OcupacionPorSubsueloChart({ data }: { data: OcupacionPorSubsuelo
   );
 }
 
-export function OcupacionPorFranjaChart({ data }: { data: OcupacionPorFranja[] }) {
+export function OcupacionPorDiaSemanaChart({ data }: { data: OcupacionPorDiaSemana[] }) {
   return (
     <ChartCard
-      title="Ocupación por franja horaria"
-      description="Distribución de inicios de reserva a lo largo del día."
+      title="Ocupación por día de la semana"
+      hasData={data.length > 0}
+      description="Distribución de reservas según el día de la semana reservado."
       table={
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Franja</TableHead>
+              <TableHead>Día</TableHead>
               <TableHead>% de reservas</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.map((d) => (
-              <TableRow key={d.franja}>
-                <TableCell>{d.franja} hs</TableCell>
+              <TableRow key={d.dia}>
+                <TableCell>{d.dia}</TableCell>
                 <TableCell>{d.ocupacion}%</TableCell>
               </TableRow>
             ))}
@@ -179,7 +192,7 @@ export function OcupacionPorFranjaChart({ data }: { data: OcupacionPorFranja[] }
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-          <XAxis dataKey="franja" tick={{ fontSize: 12 }} />
+          <XAxis dataKey="dia" tick={{ fontSize: 12 }} />
           <YAxis unit="%" tick={{ fontSize: 12 }} />
           <Tooltip formatter={(value) => [`${value}%`, "% de reservas"]} />
           <Bar dataKey="ocupacion" fill={PALETTE.aqua} radius={[4, 4, 0, 0]} name="% de reservas" />
@@ -194,6 +207,7 @@ export function RotacionPorJerarquiaChart({ data }: { data: RotacionPorJerarquia
   return (
     <ChartCard
       title="Rotación por jerarquía"
+      hasData={data.length > 0}
       description="Cantidad de reservas activas o completadas por jerarquía."
       table={
         <Table>
@@ -278,7 +292,11 @@ export function RankingCocherasChart({
 }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <ChartCard title="Cocheras más usadas" description="Top 5 por cantidad de reservas.">
+      <ChartCard
+        title="Cocheras más usadas"
+        description="Top 5 por cantidad de reservas."
+        hasData={masUsadas.length > 0}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={masUsadas} layout="vertical" margin={{ left: 24 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
@@ -289,7 +307,11 @@ export function RankingCocherasChart({
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
-      <ChartCard title="Cocheras menos usadas" description="Bottom 5 por cantidad de reservas.">
+      <ChartCard
+        title="Cocheras menos usadas"
+        description="Bottom 5 por cantidad de reservas."
+        hasData={menosUsadas.length > 0}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={menosUsadas} layout="vertical" margin={{ left: 24 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
@@ -304,22 +326,24 @@ export function RankingCocherasChart({
   );
 }
 
-export function NoShowStat({ tasa }: { tasa: number }) {
+export function CancelacionStat({ tasa }: { tasa: number }) {
   const nivel = tasa >= 20 ? "critical" : tasa >= 10 ? "warning" : "good";
-  const color = nivel === "critical" ? PALETTE.red : nivel === "warning" ? PALETTE.yellow : PALETTE.aqua;
+  // Tokens semánticos (no la paleta de series): garantizan contraste sobre blanco.
+  const colorClass =
+    nivel === "critical" ? "text-destructive" : nivel === "warning" ? "text-warning" : "text-success";
   const texto = nivel === "critical" ? "Alta" : nivel === "warning" ? "Moderada" : "Baja";
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Tasa de no-show</CardTitle>
-        <CardDescription>% de reservas liberadas automáticamente por falta de check-in.</CardDescription>
+        <CardTitle>Tasa de cancelación</CardTitle>
+        <CardDescription>
+          % de reservas canceladas por el usuario sobre el total de reservas cerradas.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-baseline gap-3">
-          <span className="text-4xl font-bold" style={{ color }}>
-            {tasa}%
-          </span>
+          <span className={`text-4xl font-bold ${colorClass}`}>{tasa}%</span>
           <span className="text-sm font-medium text-muted-foreground">Nivel: {texto}</span>
         </div>
       </CardContent>
@@ -336,6 +360,7 @@ export function FijasLiberadasChart({ data }: { data: FijasLiberadasVsBloqueadas
   return (
     <ChartCard
       title="Uso de cocheras fijas"
+      hasData={data.liberadas + data.bloqueadas > 0}
       description="Liberadas por su titular vs. bloqueadas (no disponibles para otros)."
       table={
         <Table>

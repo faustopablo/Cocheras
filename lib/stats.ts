@@ -1,11 +1,15 @@
 import type {
   Building,
+  FixedSpotAssignment,
+  FixedSpotRelease,
   Jerarquia,
   Level,
   ParkingSpot,
   Profile,
   Reservation,
 } from "@/lib/database.types";
+import { isSpotReleasedOnDate } from "@/lib/spot-status";
+import { DIAS_SEMANA } from "@/lib/utils";
 
 export interface OcupacionPorEdificio {
   edificio: string;
@@ -20,8 +24,8 @@ export interface OcupacionPorSubsuelo {
   ocupacion: number;
 }
 
-export interface OcupacionPorFranja {
-  franja: string;
+export interface OcupacionPorDiaSemana {
+  dia: string;
   ocupacion: number;
 }
 
@@ -47,14 +51,13 @@ export interface FijasLiberadasVsBloqueadas {
   bloqueadas: number;
 }
 
-const FRANJAS: { label: string; from: number; to: number }[] = [
-  { label: "00-06", from: 0, to: 6 },
-  { label: "06-09", from: 6, to: 9 },
-  { label: "09-12", from: 9, to: 12 },
-  { label: "12-15", from: 12, to: 15 },
-  { label: "15-18", from: 15, to: 18 },
-  { label: "18-24", from: 18, to: 24 },
-];
+/** Día de la semana ISO (1=lunes..7=domingo) de una fecha "yyyy-MM-dd". */
+function isoWeekdayFromFecha(fecha: string): number {
+  const [y, m, d] = fecha.split("-").map(Number);
+  const date = new Date(y, (m ?? 1) - 1, d ?? 1);
+  const js = date.getDay();
+  return js === 0 ? 7 : js;
+}
 
 function reservasValidas(reservations: Reservation[]) {
   return reservations.filter((r) => r.estado === "activa" || r.estado === "completada");
@@ -103,16 +106,13 @@ export function calcOcupacionPorSubsuelo(
   });
 }
 
-export function calcOcupacionPorFranja(reservations: Reservation[]): OcupacionPorFranja[] {
+export function calcOcupacionPorDiaSemana(reservations: Reservation[]): OcupacionPorDiaSemana[] {
   const validas = reservasValidas(reservations);
   const total = validas.length || 1;
 
-  return FRANJAS.map(({ label, from, to }) => {
-    const enFranja = validas.filter((r) => {
-      const hora = new Date(r.fecha_inicio).getHours();
-      return hora >= from && hora < to;
-    });
-    return { franja: label, ocupacion: Math.round((enFranja.length / total) * 100) };
+  return DIAS_SEMANA.map(({ value, label }) => {
+    const enDia = validas.filter((r) => isoWeekdayFromFecha(r.fecha) === value);
+    return { dia: label, ocupacion: Math.round((enDia.length / total) * 100) };
   });
 }
 
@@ -174,19 +174,36 @@ export function calcRankingCocheras(
   };
 }
 
-export function calcTasaNoShow(reservations: Reservation[]): number {
+/**
+ * Tasa de cancelación: proporción de reservas canceladas sobre el total
+ * de reservas "cerradas" (canceladas + completadas + activas). Sustituye
+ * a la antigua "tasa de no-show" ahora que la reserva confirmada equivale
+ * a check-in automático y ya no se liberan reservas por falta de
+ * check-in.
+ */
+export function calcTasaCancelacion(reservations: Reservation[]): number {
   const relevantes = reservations.filter(
-    (r) => r.estado === "no_show" || r.estado === "completada" || r.estado === "activa"
+    (r) => r.estado === "cancelada" || r.estado === "completada" || r.estado === "activa"
   );
   if (relevantes.length === 0) return 0;
-  const noShows = relevantes.filter((r) => r.estado === "no_show").length;
-  return Math.round((noShows / relevantes.length) * 1000) / 10;
+  const canceladas = relevantes.filter((r) => r.estado === "cancelada").length;
+  return Math.round((canceladas / relevantes.length) * 1000) / 10;
 }
 
-export function calcFijasLiberadasVsBloqueadas(spots: ParkingSpot[]): FijasLiberadasVsBloqueadas {
-  const fijas = spots.filter((s) => s.tipo === "fija");
+export function calcFijasLiberadasVsBloqueadas(
+  spots: ParkingSpot[],
+  fixedSpotAssignments: FixedSpotAssignment[],
+  fixedSpotReleases: FixedSpotRelease[]
+): FijasLiberadasVsBloqueadas {
+  // "Liberada" = hoy (según el día de la semana) no tiene dueño
+  // asignado, o el dueño de hoy la liberó (ver fixed_spot_releases); las
+  // fuera de servicio no cuentan como liberadas aunque estén disponibles.
+  const fijas = spots.filter((s) => s.tipo === "fija" && s.estado !== "fuera_de_servicio");
+  const liberadas = fijas.filter((s) =>
+    isSpotReleasedOnDate(fixedSpotAssignments, fixedSpotReleases, s.id)
+  ).length;
   return {
-    liberadas: fijas.filter((s) => s.estado === "libre" || s.estado === "ocupada").length,
-    bloqueadas: fijas.filter((s) => s.estado === "bloqueada").length,
+    liberadas,
+    bloqueadas: fijas.length - liberadas,
   };
 }

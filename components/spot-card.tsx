@@ -1,54 +1,129 @@
 "use client";
 
-import { Car, Lock, Ban, CheckCircle2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Ban, CarFront } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { computeSpotDisplayStatus, ESTADO_LABEL, ESTADO_BADGE_VARIANT } from "@/lib/spot-status";
-import type { ParkingSpot, Reservation } from "@/lib/database.types";
+import type { SpotDisplayInfo } from "@/lib/spot-status";
+import type { ParkingSpot } from "@/lib/database.types";
 
-const ICONS = {
-  libre: CheckCircle2,
-  ocupada: Car,
-  bloqueada: Lock,
-  fuera_de_servicio: Ban,
-};
-
+/**
+ * Tarjeta con forma de plaza de estacionamiento. La presentación deriva
+ * pura y exclusivamente de `display` (calculado con
+ * `computeSpotDisplayForDate`, ver lib/spot-status.ts); esta componente no
+ * decide reglas de negocio.
+ */
 export function SpotCard({
   spot,
-  activeReservation,
+  display,
   onReservar,
-  esMia,
 }: {
   spot: ParkingSpot;
-  activeReservation?: Reservation | null;
+  display: SpotDisplayInfo;
   onReservar?: (spot: ParkingSpot) => void;
-  esMia?: boolean;
 }) {
-  const estado = computeSpotDisplayStatus(spot, activeReservation);
-  const Icon = ICONS[estado];
+  const { estado, esMia, esReservaPropia, reservaActiva } = display;
+
+  const fueraDeServicio = estado === "fuera_de_servicio";
+  // "Ocupada": alguien tiene una reserva puntual activa sobre la cochera
+  // ese día (la reserva confirmada equivale a check-in automático).
+  // "Asignada": es una cochera fija con dueño
+  // asignado el día visto, que no la liberó, y nadie tiene reserva activa.
+  // Ambas son "de otro" cuando no soy yo (si es mía se pinta como propia).
+  const reservadaPorOtro = !esMia && estado === "ocupada";
+  const asignadaAOtro = !esMia && estado === "asignada";
+  const ocupadaPorOtro = reservadaPorOtro || asignadaAOtro;
+  const libre = estado === "libre" && !esMia;
   const puedeReservar = estado === "libre" && !esMia;
 
+  // El estado de las no reservables ya se comunica en la propia tarjeta
+  // (color + chip "Asignada"/"Ocupada"); el title amplía el detalle al hover.
+  const title = fueraDeServicio
+    ? `${spot.codigo} · fuera de servicio`
+    : reservadaPorOtro
+      ? `${spot.codigo} · reservada por otro colaborador este día`
+      : asignadaAOtro
+        ? `${spot.codigo} · cochera fija asignada a otro colaborador este día (no liberada)`
+        : spot.tipo === "fija"
+          ? `${spot.codigo} · cochera fija`
+          : spot.codigo;
+
   return (
-    <div
+    <button
+      type="button"
+      onClick={() => {
+        if (puedeReservar && onReservar) onReservar(spot);
+      }}
+      disabled={!puedeReservar}
+      title={title}
       className={cn(
-        "flex flex-col gap-2 rounded-lg border border-border bg-card p-3 transition-shadow hover:shadow-md",
-        esMia && "ring-2 ring-primary"
+        "focus-ring group relative flex aspect-[3/4] w-full flex-col items-center justify-center gap-1 rounded-[1.5rem] border-2 p-2 text-center transition-transform",
+        puedeReservar && "cursor-pointer hover:scale-[1.03] active:scale-[0.98]",
+        !puedeReservar && "cursor-default",
+        // Libre: blanco con borde verde Comafi.
+        libre && "border-comafi-verde-claro bg-white",
+        // Mía (reserva puntual propia, o mi día fijo no liberado).
+        esMia && "border-comafi-verde-claro bg-comafi-verde-claro shadow-sm",
+        // Asignada a otro: cochera fija con dueño ese día, no liberada,
+        // sin reserva activa. Relleno verde oscuro Comafi + badge.
+        asignadaAOtro && "border-comafi-verde-oscuro bg-comafi-verde-oscuro",
+        // Ocupada por otro: alguien tiene una reserva activa ahora mismo.
+        // Relleno más oscuro (negro verdoso) para diferenciarla de "asignada".
+        reservadaPorOtro && "border-comafi-negro-verdoso bg-comafi-negro-verdoso",
+        // Fuera de servicio: gris neutro y atenuado.
+        fueraDeServicio && "border-border bg-muted opacity-70"
       )}
     >
-      <div className="flex items-center justify-between">
-        <span className="font-semibold text-foreground">{spot.codigo}</span>
-        <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
-      </div>
-      <div className="flex items-center gap-1.5">
-        <Badge variant={ESTADO_BADGE_VARIANT[estado]}>{ESTADO_LABEL[estado]}</Badge>
-        {spot.tipo === "fija" && <Badge variant="outline">Fija</Badge>}
-      </div>
-      {puedeReservar && onReservar && (
-        <Button size="sm" onClick={() => onReservar(spot)} className="mt-1">
-          Reservar
-        </Button>
+      {spot.tipo === "fija" && (
+        <span
+          className={cn(
+            "absolute right-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+            esMia || ocupadaPorOtro ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
+          )}
+        >
+          Fija
+        </span>
       )}
-    </div>
+
+      {asignadaAOtro && (
+        <span className="absolute left-1.5 top-1.5 rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+          Asignada
+        </span>
+      )}
+      {reservadaPorOtro && (
+        <span className="absolute left-1.5 top-1.5 rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+          Ocupada
+        </span>
+      )}
+
+      {fueraDeServicio ? (
+        <Ban className="h-4 w-4 text-muted-foreground" aria-hidden />
+      ) : (
+        <CarFront
+          className={cn(
+            "h-4 w-4",
+            libre && "text-comafi-verde-claro",
+            (esMia || ocupadaPorOtro) && "text-white"
+          )}
+          aria-hidden
+        />
+      )}
+
+      <span
+        className={cn(
+          "text-lg font-extrabold leading-tight sm:text-xl",
+          libre && "text-comafi-verde-claro",
+          (esMia || ocupadaPorOtro) && "text-white",
+          fueraDeServicio && "text-muted-foreground line-through"
+        )}
+      >
+        {spot.codigo}
+      </span>
+
+      {esReservaPropia && reservaActiva && (
+        <span className="text-[10px] font-semibold text-white">Tu reserva</span>
+      )}
+      {esMia && !esReservaPropia && (
+        <span className="text-[10px] font-semibold text-white">Tu día</span>
+      )}
+    </button>
   );
 }

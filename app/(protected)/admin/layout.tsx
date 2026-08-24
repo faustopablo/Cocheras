@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/auth";
+import { AdminBreadcrumb } from "./admin-breadcrumb";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   // Defensa en profundidad: el middleware ya bloquea /admin/* para no-admins,
@@ -7,6 +8,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex flex-col gap-6">
+      <AdminBreadcrumb />
       <div className="rounded-md bg-accent px-4 py-2 text-sm text-accent-foreground">
         Panel de administración — los cambios acá afectan a toda la organización.
       </div>

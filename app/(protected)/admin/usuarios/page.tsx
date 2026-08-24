@@ -12,8 +12,8 @@ export default async function AdminUsuariosPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Usuarios</h1>
-        <p className="text-sm text-muted-foreground">
-          Alta manual (sin self-signup) y edición de rol/jerarquía.
+        <p className="mt-1 max-w-prose text-sm text-muted-foreground">
+          Alta manual de colaboradores y edición de rol, jerarquía y estado. No hay auto-registro.
         </p>
       </div>
       <UsersManager profiles={(profiles ?? []) as Profile[]} />

@@ -22,24 +22,28 @@ function RuleForm({
 }) {
   const router = useRouter();
   const [dias, setDias] = useState(rule?.dias_max_reserva_futura ?? 14);
-  const [horas, setHoras] = useState(rule?.horas_max_por_reserva ?? 12);
   const [maxSimultaneas, setMaxSimultaneas] = useState(rule?.max_reservas_simultaneas_por_usuario ?? 1);
-  const [tolerancia, setTolerancia] = useState(rule?.minutos_tolerancia_no_show ?? 30);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    setSaved(false);
+    setError(null);
     const res = await upsertRuleAction({
       buildingId,
       diasMaxReservaFutura: dias,
-      horasMaxPorReserva: horas,
       maxReservasSimultaneasPorUsuario: maxSimultaneas,
-      minutosToleranciaNoShow: tolerancia,
     });
     setSaving(false);
-    if (res.ok) router.refresh();
-    else alert(res.error);
+    if (res.ok) {
+      setSaved(true);
+      router.refresh();
+    } else {
+      setError(res.error ?? "No se pudo guardar la regla. Volvé a intentarlo.");
+    }
   }
 
   return (
@@ -50,35 +54,47 @@ function RuleForm({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label>Días máximos de reserva a futuro</Label>
-            <Input type="number" min={0} value={dias} onChange={(e) => setDias(Number(e.target.value))} />
-          </div>
-          <div>
-            <Label>Horas máximas por reserva</Label>
-            <Input type="number" min={1} value={horas} onChange={(e) => setHoras(Number(e.target.value))} />
-          </div>
-          <div>
-            <Label>Máx. reservas simultáneas por usuario</Label>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={`dias-${buildingId ?? "global"}`}>Días máximos de reserva a futuro</Label>
             <Input
+              id={`dias-${buildingId ?? "global"}`}
+              type="number"
+              min={0}
+              value={dias}
+              onChange={(e) => {
+                setDias(Number(e.target.value));
+                setSaved(false);
+              }}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={`max-${buildingId ?? "global"}`}>Máx. reservas simultáneas por usuario</Label>
+            <Input
+              id={`max-${buildingId ?? "global"}`}
               type="number"
               min={1}
               value={maxSimultaneas}
-              onChange={(e) => setMaxSimultaneas(Number(e.target.value))}
+              onChange={(e) => {
+                setMaxSimultaneas(Number(e.target.value));
+                setSaved(false);
+              }}
             />
           </div>
-          <div>
-            <Label>Minutos de tolerancia para no-show</Label>
-            <Input
-              type="number"
-              min={0}
-              value={tolerancia}
-              onChange={(e) => setTolerancia(Number(e.target.value))}
-            />
+          {error && (
+            <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive sm:col-span-2">
+              {error}
+            </p>
+          )}
+          <div className="flex items-center gap-3 sm:col-span-2">
+            <Button type="submit" disabled={saving}>
+              {saving ? "Guardando..." : "Guardar regla"}
+            </Button>
+            {saved && (
+              <span role="status" className="text-sm font-medium text-success">
+                Regla guardada
+              </span>
+            )}
           </div>
-          <Button type="submit" disabled={saving} className="sm:col-span-2 self-start">
-            {saving ? "Guardando..." : "Guardar regla"}
-          </Button>
         </form>
       </CardContent>
     </Card>

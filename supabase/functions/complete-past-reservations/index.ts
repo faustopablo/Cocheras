@@ -1,20 +1,22 @@
-// Edge Function: release-no-shows
+// Edge Function: complete-past-reservations
 //
-// Libera reservas activas sin check-in que superaron la tolerancia
-// configurada en `parking_rules` y crea una notificación in-app.
-// Pensada para ser invocada periódicamente por pg_cron + pg_net (ver
-// supabase/migrations/0002_functions_and_cron.sql) o por un Supabase
-// Scheduled Trigger.
+// Marca como "completada" toda reserva "activa" cuya fecha ya pasó. Ya
+// no existe el concepto de check-in/check-out ni de no-show: una
+// reserva confirmada equivale a check-in automático, así que solo hace
+// falta cerrar (completar) las reservas de días que ya terminaron.
+//
+// Reemplaza a la antigua Edge Function `release-no-shows`.
 //
 // Deploy:
-//   supabase functions deploy release-no-shows
+//   supabase functions deploy complete-past-reservations
 //
 // Variables de entorno requeridas (se configuran con `supabase secrets set`):
 //   SUPABASE_URL              (se inyecta automáticamente en runtime)
 //   SUPABASE_SERVICE_ROLE_KEY (se inyecta automáticamente en runtime)
 //
 // La lógica de negocio pesada vive en la función SQL
-// `public.release_no_show_reservations()` para poder reusarla también
+// `public.complete_past_reservations()` (ver
+// supabase/migrations/0006_sin_checkin.sql) para poder reusarla también
 // desde un cron 100% en SQL sin pasar por esta función.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -25,31 +27,24 @@ Deno.serve(async (req: Request) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const { data, error } = await supabase.rpc("release_no_show_reservations");
+    const { data, error } = await supabase.rpc("complete_past_reservations");
 
     if (error) {
-      console.error("Error liberando no-shows:", error);
+      console.error("Error completando reservas pasadas:", error);
       return new Response(JSON.stringify({ ok: false, error: error.message }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    const liberadas = data ?? [];
-
-    // Punto de extensión: acá se podría llamar a la Edge Function
-    // `send-email` (o directamente a un proveedor SMTP/Resend) para
-    // avisar por mail a cada usuario afectado. Ver supabase/functions/send-email.
-    // for (const reserva of liberadas) {
-    //   await fetch(`${supabaseUrl}/functions/v1/send-email`, { ... })
-    // }
+    const completadas = data ?? [];
 
     return new Response(
-      JSON.stringify({ ok: true, liberadas: liberadas.length }),
+      JSON.stringify({ ok: true, completadas: completadas.length }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("Error inesperado en release-no-shows:", err);
+    console.error("Error inesperado en complete-past-reservations:", err);
     return new Response(JSON.stringify({ ok: false, error: String(err) }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

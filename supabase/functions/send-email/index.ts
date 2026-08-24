@@ -26,7 +26,7 @@
 //          }),
 //        });
 //
-//   4. Invocar esta función desde otras Edge Functions (ej. release-no-shows)
+//   4. Invocar esta función desde otras Edge Functions (ej. complete-past-reservations)
 //      o desde server actions de Next.js vía supabase.functions.invoke("send-email", { body: ... }).
 //
 // Deploy: supabase functions deploy send-email
