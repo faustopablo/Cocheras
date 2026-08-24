@@ -35,18 +35,6 @@ export function formatDias(dias: number[]): string {
   return `${ordenados.slice(0, -1).join(", ")} y ${ordenados[ordenados.length - 1]}`;
 }
 
-export function formatDateTime(iso: string | null | undefined) {
-  if (!iso) return "-";
-  const d = new Date(iso);
-  return d.toLocaleString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export function formatDate(iso: string | null | undefined) {
   if (!iso) return "-";
   const d = new Date(iso);
@@ -57,11 +45,32 @@ export function formatDate(iso: string | null | undefined) {
   });
 }
 
-export function toLocalInputValue(date: Date) {
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-    date.getDate()
-  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+/**
+ * Fecha "de hoy" (yyyy-MM-dd) en hora argentina, independiente del
+ * timezone del servidor o del navegador. Usar SIEMPRE que se calcule
+ * "hoy" para validar o limitar fechas de reserva/liberación: en el
+ * servidor `new Date().toISOString()` es UTC (= ART+3), así que desde
+ * las 21:00 hora argentina la fecha UTC ya es "mañana" y las reservas
+ * para hoy se rechazaban como pasadas.
+ */
+export function hoyArgentina(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+/** Date local (00:00) a partir de "yyyy-MM-dd", sin pasar por UTC. */
+export function dateFromDateValue(fecha: string): Date {
+  const [y, m, d] = fecha.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1);
+}
+
+/** "Hoy" en hora argentina como Date local (00:00). */
+export function hoyArgentinaDate(): Date {
+  return dateFromDateValue(hoyArgentina());
 }
 
 /** Formato yyyy-MM-dd (hora local) para inputs `type="date"`. */

@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { createReservationAction } from "@/app/actions/reservations";
-import { toLocalDateValue } from "@/lib/utils";
+import { hoyArgentina, toLocalDateValue } from "@/lib/utils";
 import type { ParkingSpot } from "@/lib/database.types";
 
 export function ReservationDialog({
@@ -36,7 +36,7 @@ export function ReservationDialog({
 
   if (!spot) return null;
   const currentSpot = spot;
-  const minFecha = toLocalDateValue(new Date());
+  const minFecha = hoyArgentina();
 
   async function handleSubmit() {
     setLoading(true);

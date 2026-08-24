@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { createFixedSpotReleaseAction } from "@/app/actions/reservations";
-import { formatDias, toLocalDateValue } from "@/lib/utils";
+import { formatDias, hoyArgentina } from "@/lib/utils";
 
 export function FixedSpotReleaseDialog({
   assignmentId,
@@ -28,7 +28,7 @@ export function FixedSpotReleaseDialog({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const today = toLocalDateValue(new Date());
+  const today = hoyArgentina();
   const [desde, setDesde] = useState(today);
   const [hasta, setHasta] = useState(today);
   const [motivo, setMotivo] = useState("");

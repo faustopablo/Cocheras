@@ -5,7 +5,7 @@ import type {
   ParkingSpot,
   Reservation,
 } from "@/lib/database.types";
-import { isoWeekday, toLocalDateValue } from "@/lib/utils";
+import { hoyArgentina, hoyArgentinaDate, isoWeekday, toLocalDateValue } from "@/lib/utils";
 
 /**
  * Asignación (si existe) que es dueña de `spotId` para el día de la
@@ -16,7 +16,7 @@ import { isoWeekday, toLocalDateValue } from "@/lib/utils";
 export function getOwningAssignmentOnDate(
   assignments: FixedSpotAssignment[],
   spotId: string,
-  date: Date = new Date()
+  date: Date = hoyArgentinaDate()
 ): FixedSpotAssignment | null {
   const dow = isoWeekday(date);
   return (
@@ -35,7 +35,7 @@ export function isSpotReleasedOnDate(
   assignments: FixedSpotAssignment[],
   releases: FixedSpotRelease[],
   spotId: string,
-  date: Date = new Date()
+  date: Date = hoyArgentinaDate()
 ): boolean {
   const asignacion = getOwningAssignmentOnDate(assignments, spotId, date);
   if (!asignacion) return true;
@@ -124,9 +124,9 @@ export function computeSpotDisplayForDate(
   releases: FixedSpotRelease[],
   reservationOnDate: Reservation | null | undefined,
   currentUserId: string,
-  date: Date = new Date()
+  date: Date = hoyArgentinaDate()
 ): SpotDisplayInfo {
-  const esProyeccion = !isSameLocalDate(date, new Date());
+  const esProyeccion = toLocalDateValue(date) !== hoyArgentina();
 
   const owningAssignment =
     spot.tipo === "fija" ? getOwningAssignmentOnDate(assignments, spot.id, date) : null;
@@ -152,9 +152,6 @@ export function computeSpotDisplayForDate(
   };
 }
 
-function isSameLocalDate(a: Date, b: Date) {
-  return toLocalDateValue(a) === toLocalDateValue(b);
-}
 
 export const ESTADO_LABEL: Record<SpotDisplayEstado, string> = {
   libre: "Libre",

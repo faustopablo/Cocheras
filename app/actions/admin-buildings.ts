@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { hoyArgentina } from "@/lib/utils";
 import type { ActionResult } from "./reservations";
 import type { EstadoCochera, TipoCochera } from "@/lib/database.types";
 
@@ -166,7 +167,7 @@ async function buildFixedAssignmentWarning(
   userId: string,
   dias: number[]
 ): Promise<string | undefined> {
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyArgentina();
   const { data: reservas } = await supabase
     .from("reservations")
     .select("fecha, spot:parking_spots(codigo)")

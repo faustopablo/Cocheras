@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { hoyArgentina } from "@/lib/utils";
 import type { ParkingRule } from "@/lib/database.types";
 
 export interface ActionResult {
@@ -85,8 +86,9 @@ export async function createReservationAction(input: {
     return { ok: false, error: "La fecha ingresada no es válida." };
   }
 
-  const hoy = new Date();
-  const hoyFecha = hoy.toISOString().slice(0, 10);
+  // "Hoy" en hora argentina: en el servidor toISOString() es UTC y desde
+  // las 21:00 ART rechazaba como pasadas las reservas para el día de hoy.
+  const hoyFecha = hoyArgentina();
   if (input.fecha < hoyFecha) {
     return { ok: false, error: "No podés reservar para una fecha pasada." };
   }
