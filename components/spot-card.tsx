@@ -19,9 +19,8 @@ export function SpotCard({
 }: {
   spot: ParkingSpot;
   display: SpotDisplayInfo;
-  /** Nombre del dueño fijo de la cochera para el día visto, solo cuando
-   * quien mira es admin (ver components/spots-board.tsx). No definido para
-   * el resto de los usuarios ni cuando el dueño es el propio usuario. */
+  /** Nombre del dueño fijo de la cochera para el día visto. Lo ven todos
+   * los usuarios, incluido el propio dueño (ver components/spots-board.tsx). */
   ownerName?: string;
   onReservar?: (spot: ParkingSpot) => void;
 }) {
@@ -127,25 +126,25 @@ export function SpotCard({
         {spot.codigo}
       </span>
 
+      {esReservaPropia && reservaActiva && (
+        <span className="text-[10px] font-semibold text-white">Tu reserva</span>
+      )}
+      {esMia && !esReservaPropia && (
+        <span className="text-[10px] font-semibold text-white">Tu día</span>
+      )}
+
       {ownerName && (
         <span
           title={liberadaPorDueno ? `${ownerName} (liberada)` : ownerName}
           className={cn(
             "block w-full max-w-full truncate px-1 text-[10px] font-semibold",
-            asignadaAOtro && "text-white",
+            (asignadaAOtro || esMia) && "text-white",
             liberadaPorDueno && "text-muted-foreground"
           )}
         >
           {ownerName}
           {liberadaPorDueno && " (liberada)"}
         </span>
-      )}
-
-      {esReservaPropia && reservaActiva && (
-        <span className="text-[10px] font-semibold text-white">Tu reserva</span>
-      )}
-      {esMia && !esReservaPropia && (
-        <span className="text-[10px] font-semibold text-white">Tu día</span>
       )}
     </button>
   );

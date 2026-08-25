@@ -56,10 +56,10 @@ export function SpotsBoard({
   fixedSpotAssignments: FixedSpotAssignment[];
   fixedSpotReleases: FixedSpotRelease[];
   currentUserId: string;
-  /** Nombre de cada dueño de cochera fija, por user_id. Solo lo recibe el
-   * admin (la página server-side lo trae con la RLS de admin en
-   * `profiles`); para el resto de los usuarios no se pasa, así nunca se
-   * intenta mostrar nombres de otros colaboradores. */
+  /** Nombre de cada dueño de cochera fija, por user_id (todos los
+   * usuarios autenticados lo reciben: la página server-side lo trae de
+   * la vista pública `owner_names`, que solo expone id+nombre de
+   * usuarios con alguna cochera fija asignada). */
   ownerNamesByUserId?: Record<string, string>;
 }) {
   const router = useRouter();
@@ -413,15 +413,13 @@ export function SpotsBoard({
                                 asignacionDelDia: null,
                               };
                             const ownerId = display.asignacionDelDia?.user_id;
-                            // Solo el admin recibe `ownerNamesByUserId`, y solo lo
-                            // mostramos en "asignada" (dueño de otro, no liberada) y
-                            // "libre por liberación del dueño"; en "ocupada" ya hay
-                            // una reserva puntual de un tercero que manda, y en "tu
-                            // día" el dueño soy yo (ownerId === currentUserId).
+                            // Todos los usuarios ven el nombre del dueño de una
+                            // cochera fija en "asignada" (con o sin dueño = yo mismo,
+                            // ver "Tu día" en SpotCard) y en "libre por liberación
+                            // del dueño"; en "ocupada" ya hay una reserva puntual de
+                            // un tercero que manda y no corresponde mostrar dueño.
                             const ownerName =
-                              ownerId &&
-                              ownerId !== currentUserId &&
-                              (display.estado === "asignada" || display.estado === "libre")
+                              ownerId && (display.estado === "asignada" || display.estado === "libre")
                                 ? ownerNamesByUserId?.[ownerId]
                                 : undefined;
                             return (

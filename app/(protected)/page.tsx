@@ -14,7 +14,7 @@ import type {
 export const metadata = { title: "Cocheras — Cocheras Comafi" };
 
 export default async function HomePage() {
-  const { user, profile } = await requireUser();
+  const { user } = await requireUser();
   const supabase = await createClient();
 
   const [
@@ -40,21 +40,20 @@ export default async function HomePage() {
       .order("fecha_desde"),
   ]);
 
-  // Solo el admin ve el nombre del dueño de cada cochera fija en el mapa.
-  // La RLS de `profiles` le permite leer perfiles ajenos; al resto de los
-  // usuarios ni siquiera se les hace esta consulta.
+  // Todos los usuarios ven el nombre del dueño de cada cochera fija en el
+  // mapa: se lee de la vista pública `owner_names` (migración 0009), que
+  // solo expone id+nombre de usuarios con alguna cochera fija asignada
+  // (no email/rol/jerarquía, y no el resto de los usuarios del banco).
   let ownerNamesByUserId: Record<string, string> | undefined;
-  if (profile.rol === "admin") {
-    const ownerIds = Array.from(new Set((assignments ?? []).map((a) => a.user_id)));
-    if (ownerIds.length > 0) {
-      const { data: owners } = await supabase
-        .from("profiles")
-        .select("id, nombre")
-        .in("id", ownerIds);
-      ownerNamesByUserId = Object.fromEntries(
-        (owners ?? []).map((o) => [o.id, o.nombre as string])
-      );
-    }
+  const ownerIds = Array.from(new Set((assignments ?? []).map((a) => a.user_id)));
+  if (ownerIds.length > 0) {
+    const { data: owners } = await supabase
+      .from("owner_names")
+      .select("user_id, nombre")
+      .in("user_id", ownerIds);
+    ownerNamesByUserId = Object.fromEntries(
+      (owners ?? []).map((o) => [o.user_id as string, o.nombre as string])
+    );
   }
 
   return (
