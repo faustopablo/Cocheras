@@ -28,10 +28,25 @@ export async function signInAction(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     return { error: "Email o contraseña incorrectos. Verificá tus datos e intentá de nuevo." };
+  }
+
+  // El baneo en Supabase Auth (ver app/actions/admin-users.ts) ya debería
+  // rechazar el signInWithPassword de un usuario desactivado, pero se
+  // valida también `profiles.activo` acá por las dudas (defensa en
+  // profundidad) antes de dejarlo pasar.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("activo")
+    .eq("id", data.user.id)
+    .single();
+
+  if (!profile || !profile.activo) {
+    await supabase.auth.signOut();
+    return { error: "Tu usuario está desactivado. Contactá a un administrador de Cocheras Comafi." };
   }
 
   redirect(redirectTo || "/");

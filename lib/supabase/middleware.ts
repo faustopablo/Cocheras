@@ -38,19 +38,35 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && (pathname.startsWith("/admin") || pathname.startsWith("/invitados"))) {
+  if (user && !isPublic) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("rol,activo")
       .eq("id", user.id)
       .single();
 
-    const rolesPermitidos = pathname.startsWith("/admin") ? ["admin"] : ["admin", "asistente"];
-
-    if (!profile || !rolesPermitidos.includes(profile.rol) || !profile.activo) {
+    // Enforcement de `profiles.activo`: se chequea en cada request (no solo
+    // al hacer login) para que un usuario desactivado mientras tenía una
+    // sesión abierta quede afuera de inmediato, sin esperar a que expire su
+    // token. Se complementa con el baneo en Supabase Auth (ver
+    // app/actions/admin-users.ts) que bloquea logins y refresh de token.
+    if (!profile || !profile.activo) {
+      await supabase.auth.signOut();
       const url = request.nextUrl.clone();
-      url.pathname = "/";
+      url.pathname = "/login";
+      url.search = "";
+      url.searchParams.set("error", "inactivo");
       return NextResponse.redirect(url);
+    }
+
+    if (pathname.startsWith("/admin") || pathname.startsWith("/invitados")) {
+      const rolesPermitidos = pathname.startsWith("/admin") ? ["admin"] : ["admin", "asistente"];
+
+      if (!rolesPermitidos.includes(profile.rol)) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/";
+        return NextResponse.redirect(url);
+      }
     }
   }
 
