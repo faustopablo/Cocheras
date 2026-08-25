@@ -66,6 +66,16 @@ export interface FixedSpotAssignment {
   created_at: string;
 }
 
+/**
+ * Fila de la vista `public.owner_names` (migración 0009): id + nombre de
+ * un usuario que es dueño de al menos una cochera fija. No incluye email,
+ * rol ni jerarquía, y no incluye usuarios sin cocheras fijas asignadas.
+ */
+export interface OwnerName {
+  user_id: string;
+  nombre: string;
+}
+
 export interface Reservation {
   id: string;
   spot_id: string;

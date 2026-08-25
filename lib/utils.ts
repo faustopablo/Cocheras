@@ -35,8 +35,23 @@ export function formatDias(dias: number[]): string {
   return `${ordenados.slice(0, -1).join(", ")} y ${ordenados[ordenados.length - 1]}`;
 }
 
+/**
+ * "25/08/2026" a partir de una columna `date` ("yyyy-MM-dd") o
+ * `timestamptz` (ISO completo con horario/offset) de Postgres.
+ *
+ * Para las `date` ("yyyy-MM-dd", sin horario) hay que evitar
+ * `new Date("yyyy-MM-dd")`: el string se interpreta como medianoche UTC y,
+ * al formatearlo después en un huso con offset negativo (ART = UTC-3, y
+ * cualquier navegador en Argentina), cae al día anterior — el bug de "la
+ * reserva del 25 se ve como 24". Por eso las `date` se parsean a mano
+ * (día/mes/año local, sin pasar por UTC) con `dateFromDateValue`; solo los
+ * `timestamptz` (que sí traen su propio offset) pasan por `new Date`.
+ */
 export function formatDate(iso: string | null | undefined) {
   if (!iso) return "-";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    return formatDateShort(dateFromDateValue(iso));
+  }
   const d = new Date(iso);
   return d.toLocaleDateString("es-AR", {
     day: "2-digit",
