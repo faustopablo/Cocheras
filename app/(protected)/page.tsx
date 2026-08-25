@@ -14,7 +14,7 @@ import type {
 export const metadata = { title: "Cocheras — Cocheras Comafi" };
 
 export default async function HomePage() {
-  const { user } = await requireUser();
+  const { user, profile } = await requireUser();
   const supabase = await createClient();
 
   const [
@@ -40,6 +40,23 @@ export default async function HomePage() {
       .order("fecha_desde"),
   ]);
 
+  // Solo el admin ve el nombre del dueño de cada cochera fija en el mapa.
+  // La RLS de `profiles` le permite leer perfiles ajenos; al resto de los
+  // usuarios ni siquiera se les hace esta consulta.
+  let ownerNamesByUserId: Record<string, string> | undefined;
+  if (profile.rol === "admin") {
+    const ownerIds = Array.from(new Set((assignments ?? []).map((a) => a.user_id)));
+    if (ownerIds.length > 0) {
+      const { data: owners } = await supabase
+        .from("profiles")
+        .select("id, nombre")
+        .in("id", ownerIds);
+      ownerNamesByUserId = Object.fromEntries(
+        (owners ?? []).map((o) => [o.id, o.nombre as string])
+      );
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -58,6 +75,7 @@ export default async function HomePage() {
         fixedSpotAssignments={(assignments ?? []) as FixedSpotAssignment[]}
         fixedSpotReleases={(releases ?? []) as FixedSpotRelease[]}
         currentUserId={user.id}
+        ownerNamesByUserId={ownerNamesByUserId}
       />
     </div>
   );

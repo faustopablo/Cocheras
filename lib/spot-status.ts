@@ -108,6 +108,11 @@ export interface SpotDisplayInfo {
    * "disponibilidad proyectada"); el cálculo es igualmente exacto porque
    * las reservas ahora son diarias. */
   esProyeccion: boolean;
+  /** Asignación dueña de la cochera para el día de semana de `date`, si la
+   * cochera es fija y tiene dueño ese día (esté liberada o no). `null` si
+   * la cochera no es fija o no tiene dueño asignado ese día. Sirve para
+   * que el admin pueda mostrar el nombre del dueño (ver components/spot-card.tsx). */
+  asignacionDelDia: FixedSpotAssignment | null;
 }
 
 /**
@@ -149,6 +154,7 @@ export function computeSpotDisplayForDate(
     esReservaPropia,
     reservaActiva: activeReservation,
     esProyeccion,
+    asignacionDelDia: owningAssignment,
   };
 }
 
