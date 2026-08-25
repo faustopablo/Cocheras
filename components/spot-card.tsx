@@ -19,8 +19,11 @@ export function SpotCard({
 }: {
   spot: ParkingSpot;
   display: SpotDisplayInfo;
-  /** Nombre del dueño fijo de la cochera para el día visto. Lo ven todos
-   * los usuarios, incluido el propio dueño (ver components/spots-board.tsx). */
+  /** Nombre de quien ocupa la cochera para el día visto: el dueño fijo
+   * (asignada / libre por liberación) o quien tiene la reserva puntual
+   * activa (ocupada) — "Invitado" si es una reserva de invitado. Lo ven
+   * todos los usuarios, incluido el propio ocupante (ver
+   * components/spots-board.tsx). */
   ownerName?: string;
   onReservar?: (spot: ParkingSpot) => void;
 }) {
@@ -138,7 +141,7 @@ export function SpotCard({
           title={liberadaPorDueno ? `${ownerName} (liberada)` : ownerName}
           className={cn(
             "block w-full max-w-full truncate px-1 text-[10px] font-semibold",
-            (asignadaAOtro || esMia) && "text-white",
+            (asignadaAOtro || reservadaPorOtro || esMia) && "text-white",
             liberadaPorDueno && "text-muted-foreground"
           )}
         >
