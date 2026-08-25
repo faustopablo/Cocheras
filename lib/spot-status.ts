@@ -1,9 +1,9 @@
 import type {
+  ActiveReservationBoardRow,
   EstadoCochera,
   FixedSpotAssignment,
   FixedSpotRelease,
   ParkingSpot,
-  Reservation,
 } from "@/lib/database.types";
 import { hoyArgentina, hoyArgentinaDate, isoWeekday, toLocalDateValue } from "@/lib/utils";
 
@@ -75,7 +75,7 @@ export type SpotDisplayEstado = EstadoCochera | "asignada";
 
 export function computeSpotDisplayStatus(
   spot: ParkingSpot,
-  activeReservation: Reservation | null | undefined,
+  activeReservation: ActiveReservationBoardRow | null | undefined,
   isReleasedOnDate?: boolean
 ): SpotDisplayEstado {
   if (spot.estado === "fuera_de_servicio") return "fuera_de_servicio";
@@ -103,7 +103,7 @@ export interface SpotDisplayInfo {
    * es mía. */
   esReservaPropia: boolean;
   /** La reserva activa considerada para esta fecha, si corresponde. */
-  reservaActiva: Reservation | null;
+  reservaActiva: ActiveReservationBoardRow | null;
   /** true si `date` no es hoy: solo cambia el copy ("estado en vivo" vs.
    * "disponibilidad proyectada"); el cálculo es igualmente exacto porque
    * las reservas ahora son diarias. */
@@ -127,7 +127,7 @@ export function computeSpotDisplayForDate(
   spot: ParkingSpot,
   assignments: FixedSpotAssignment[],
   releases: FixedSpotRelease[],
-  reservationOnDate: Reservation | null | undefined,
+  reservationOnDate: ActiveReservationBoardRow | null | undefined,
   currentUserId: string,
   date: Date = hoyArgentinaDate()
 ): SpotDisplayInfo {

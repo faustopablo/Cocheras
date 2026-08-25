@@ -29,12 +29,12 @@ import {
   toLocalDateValue,
 } from "@/lib/utils";
 import type {
+  ActiveReservationBoardRow,
   Building,
   FixedSpotAssignment,
   FixedSpotRelease,
   Level,
   ParkingSpot,
-  Reservation,
 } from "@/lib/database.types";
 
 type Filtro = "todos" | "libres";
@@ -47,20 +47,23 @@ export function SpotsBoard({
   fixedSpotAssignments,
   fixedSpotReleases,
   currentUserId,
-  ownerNamesByUserId,
+  userDisplayNamesByUserId,
 }: {
   buildings: Building[];
   levels: Level[];
   spots: ParkingSpot[];
-  activeReservations: Reservation[];
+  /** Reservas activas de TODOS los usuarios (no solo las propias), leídas
+   * de la vista pública `active_reservations_board` (migración 0010). */
+  activeReservations: ActiveReservationBoardRow[];
   fixedSpotAssignments: FixedSpotAssignment[];
   fixedSpotReleases: FixedSpotRelease[];
   currentUserId: string;
-  /** Nombre de cada dueño de cochera fija, por user_id (todos los
-   * usuarios autenticados lo reciben: la página server-side lo trae de
-   * la vista pública `owner_names`, que solo expone id+nombre de
-   * usuarios con alguna cochera fija asignada). */
-  ownerNamesByUserId?: Record<string, string>;
+  /** Nombre de cada dueño de cochera fija y de cada colaborador con una
+   * reserva puntual activa, por user_id (todos los usuarios autenticados
+   * lo reciben: la página server-side lo trae de la vista pública
+   * `user_display_names`, migración 0010, que solo expone id+nombre de
+   * usuarios efectivamente involucrados en alguna ocupación del mapa). */
+  userDisplayNamesByUserId?: Record<string, string>;
 }) {
   const router = useRouter();
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null);
@@ -78,7 +81,7 @@ export function SpotsBoard({
   // Las reservas son diarias: se indexan por cochera + fecha exacta para
   // poder proyectar cualquier día (no solo hoy) sin aproximaciones.
   const reservationBySpotAndFecha = useMemo(() => {
-    const map = new Map<string, Reservation>();
+    const map = new Map<string, ActiveReservationBoardRow>();
     for (const r of activeReservations) {
       map.set(`${r.spot_id}_${r.fecha}`, r);
     }
@@ -205,7 +208,8 @@ export function SpotsBoard({
   return (
     <div className="flex flex-col gap-6">
       <RealtimeRefresher
-        tables={["parking_spots", "reservations", "fixed_spot_assignments", "fixed_spot_releases"]}
+        tables={["parking_spots", "fixed_spot_assignments", "fixed_spot_releases"]}
+        pollMs={30000}
       />
 
       <BoardToolbar
@@ -416,12 +420,25 @@ export function SpotsBoard({
                             // Todos los usuarios ven el nombre del dueño de una
                             // cochera fija en "asignada" (con o sin dueño = yo mismo,
                             // ver "Tu día" en SpotCard) y en "libre por liberación
-                            // del dueño"; en "ocupada" ya hay una reserva puntual de
-                            // un tercero que manda y no corresponde mostrar dueño.
-                            const ownerName =
+                            // del dueño".
+                            const fixedOwnerName =
                               ownerId && (display.estado === "asignada" || display.estado === "libre")
-                                ? ownerNamesByUserId?.[ownerId]
+                                ? userDisplayNamesByUserId?.[ownerId]
                                 : undefined;
+                            // "Ocupada": hay una reserva puntual activa de un
+                            // tercero (mismo criterio de nombres que el dueño
+                            // fijo: si es de un colaborador, su nombre vía
+                            // `userDisplayNamesByUserId`; si es de un invitado,
+                            // la etiqueta fija "Invitado" — el nombre real del
+                            // invitado sigue restringido a admin/asistente).
+                            const reserva = display.reservaActiva;
+                            const occupantName =
+                              display.estado === "ocupada" && !display.esMia && reserva
+                                ? reserva.user_id
+                                  ? userDisplayNamesByUserId?.[reserva.user_id]
+                                  : "Invitado"
+                                : undefined;
+                            const ownerName = fixedOwnerName ?? occupantName;
                             return (
                               <SpotCard
                                 key={spot.id}

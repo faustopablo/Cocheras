@@ -70,8 +70,21 @@ export interface FixedSpotAssignment {
  * Fila de la vista `public.owner_names` (migración 0009): id + nombre de
  * un usuario que es dueño de al menos una cochera fija. No incluye email,
  * rol ni jerarquía, y no incluye usuarios sin cocheras fijas asignadas.
+ * Ver también `UserDisplayName` (0010), que la incluye como subconjunto.
  */
 export interface OwnerName {
+  user_id: string;
+  nombre: string;
+}
+
+/**
+ * Fila de la vista `public.user_display_names` (migración 0010): id +
+ * nombre de un usuario que es dueño de al menos una cochera fija, o que
+ * tiene al menos una reserva puntual activa. No incluye email, rol ni
+ * jerarquía, y no incluye al resto de la nómina del banco. Reemplaza a
+ * `owner_names` (0009) como fuente que consulta la app.
+ */
+export interface UserDisplayName {
   user_id: string;
   nombre: string;
 }
@@ -87,6 +100,23 @@ export interface Reservation {
   estado: EstadoReserva;
   created_by: string | null;
   created_at: string;
+}
+
+/**
+ * Fila de la vista `public.active_reservations_board` (migración 0010):
+ * ocupación mínima de TODAS las reservas activas (no solo la propia),
+ * visible a cualquier usuario autenticado. No incluye ninguna columna de
+ * `guests`: `es_invitado` alcanza para que el mapa muestre "Invitado" en
+ * vez del nombre real del invitado (ver components/spots-board.tsx).
+ */
+export interface ActiveReservationBoardRow {
+  reservation_id: string;
+  spot_id: string;
+  /** Fecha (día completo) de la reserva. yyyy-MM-dd. */
+  fecha: string;
+  estado: EstadoReserva;
+  user_id: string | null;
+  es_invitado: boolean;
 }
 
 export interface FixedSpotRelease {
