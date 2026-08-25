@@ -38,14 +38,16 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && pathname.startsWith("/admin")) {
+  if (user && (pathname.startsWith("/admin") || pathname.startsWith("/invitados"))) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("rol,activo")
       .eq("id", user.id)
       .single();
 
-    if (!profile || profile.rol !== "admin" || !profile.activo) {
+    const rolesPermitidos = pathname.startsWith("/admin") ? ["admin"] : ["admin", "asistente"];
+
+    if (!profile || !rolesPermitidos.includes(profile.rol) || !profile.activo) {
       const url = request.nextUrl.clone();
       url.pathname = "/";
       return NextResponse.redirect(url);

@@ -7,19 +7,23 @@ import { Menu, X, LogOut, ShieldCheck } from "lucide-react";
 import { signOutAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ROL_LABEL } from "@/components/user-profile-sections";
 import type { Profile } from "@/lib/database.types";
 
 const NAV_LINKS = [
   { href: "/", label: "Cocheras" },
   { href: "/reservas", label: "Mis reservas" },
-  { href: "/invitados", label: "Invitados" },
 ];
 
 export function Navbar({ profile }: { profile: Profile }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const isAdmin = profile.rol === "admin";
+  const puedeGestionarInvitados = profile.rol === "admin" || profile.rol === "asistente";
   const isAdminSection = pathname.startsWith("/admin");
+  const navLinks = puedeGestionarInvitados
+    ? [...NAV_LINKS, { href: "/invitados", label: "Invitados" }]
+    : NAV_LINKS;
 
   const linkClass = (href: string, mobile = false) =>
     cn(
@@ -41,7 +45,7 @@ export function Navbar({ profile }: { profile: Profile }) {
             <span className="hidden sm:inline">Cocheras Comafi</span>
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
-            {NAV_LINKS.map((l) => (
+            {navLinks.map((l) => (
               <Link key={l.href} href={l.href} className={linkClass(l.href)}>
                 {l.label}
               </Link>
@@ -73,7 +77,7 @@ export function Navbar({ profile }: { profile: Profile }) {
             <p className="text-sm font-medium leading-tight">{profile.nombre}</p>
             <p className="flex items-center justify-end gap-1 text-xs text-white/60">
               {isAdmin && <ShieldCheck className="h-3 w-3" />}
-              {isAdmin ? "Administrador" : "Colaborador"}
+              {ROL_LABEL[profile.rol]}
             </p>
           </Link>
           <form action={signOutAction}>
@@ -96,7 +100,7 @@ export function Navbar({ profile }: { profile: Profile }) {
       {open && (
         <div className="border-t border-white/10 px-4 pb-4 md:hidden">
           <nav className="flex flex-col gap-1 pt-2">
-            {NAV_LINKS.map((l) => (
+            {navLinks.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
@@ -131,7 +135,7 @@ export function Navbar({ profile }: { profile: Profile }) {
               className="focus-ring rounded-md px-1 py-1 transition-colors hover:bg-white/10"
             >
               <p className="text-sm font-medium">{profile.nombre}</p>
-              <p className="text-xs text-white/60">{isAdmin ? "Administrador" : "Colaborador"}</p>
+              <p className="text-xs text-white/60">{ROL_LABEL[profile.rol]}</p>
             </Link>
             <form action={signOutAction}>
               <Button variant="ghost" size="sm" type="submit" className="text-white hover:bg-white/10">

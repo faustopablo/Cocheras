@@ -13,6 +13,18 @@ administrar edificios, usuarios, reglas y estadísticas de uso.
 - **Recharts** para los KPIs del panel de estadísticas (paleta validada para
   contraste y daltonismo — ver `docs`/comentarios en `components/admin/stats-charts.tsx`).
 
+## Roles
+
+| Rol           | Reservar su cochera | `/admin/*` | `/invitados` |
+| ------------- | -------------------- | ---------- | ------------- |
+| `colaborador` | Sí                   | No         | No            |
+| `asistente`   | Sí                   | No         | Sí            |
+| `admin`       | Sí                   | Sí         | Sí            |
+
+`asistente` es igual a `colaborador` salvo que además puede dar de alta y
+gestionar invitados (única diferencia). El `colaborador` común no ve ni
+gestiona invitados. Ver `supabase/migrations/0008_rol_asistente.sql`.
+
 ## Restricción de cumplimiento importante
 
 El modelo de **invitados** es intencionalmente mínimo: `nombre`, `empresa`,
@@ -34,7 +46,7 @@ app/                         # App Router (Next.js)
   actions/                   # Server Actions (mutaciones)
 components/                  # UI (shadcn-like) + componentes de negocio
 lib/                         # Supabase clients, tipos, helpers de auth/stats
-proxy.ts                     # Protege rutas y valida rol admin en /admin/* (convención "proxy" de Next 16, ex-middleware.ts)
+proxy.ts                     # Protege rutas y valida rol en /admin/* y /invitados (convención "proxy" de Next 16, ex-middleware.ts)
 supabase/
   migrations/                # SQL: esquema, RLS, triggers, funciones
   seed.sql                   # Datos de ejemplo (2 edificios, ~15 cocheras)
@@ -170,7 +182,10 @@ Puntos clave:
   crear un usuario en Auth (alta manual únicamente, sin self-signup).
 - RLS: cada usuario ve/edita sus propios datos; `public.is_admin()` (función
   `security definer`) le da bypass a los administradores sin generar
-  recursión en las policies.
+  recursión en las policies. `public.is_admin_or_asistente()` (agregada en
+  `0008_rol_asistente.sql`) hace lo mismo para las policies de `guests` y
+  las de `reservations` de invitados (origen `invitado`), que quedan
+  restringidas a `admin`/`asistente`.
 - **Reservas diarias (no por franja horaria)**
   (`0005_una_cochera_por_dia.sql`): una reserva es una cochera + un día
   completo (columna `reservations.fecha`), no un rango horario.

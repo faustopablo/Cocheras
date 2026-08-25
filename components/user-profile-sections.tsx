@@ -14,7 +14,14 @@ import type {
   OrigenReserva,
   ParkingSpot,
   Reservation,
+  Rol,
 } from "@/lib/database.types";
+
+export const ROL_LABEL: Record<Rol, string> = {
+  admin: "Administrador",
+  asistente: "Asistente",
+  colaborador: "Colaborador",
+};
 
 export const ESTADO_RESERVA_VARIANT: Record<EstadoReserva, "success" | "muted" | "destructive" | "warning"> = {
   activa: "success",

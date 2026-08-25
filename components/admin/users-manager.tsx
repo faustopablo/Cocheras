@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { createUserAction, updateUserAction } from "@/app/actions/admin-users";
+import { ROL_LABEL } from "@/components/user-profile-sections";
 import type { Jerarquia, Profile, Rol } from "@/lib/database.types";
 
 export function UsersManager({ profiles }: { profiles: Profile[] }) {
@@ -81,8 +82,9 @@ export function UsersManager({ profiles }: { profiles: Profile[] }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="colaborador">Colaborador</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="admin">{ROL_LABEL.admin}</SelectItem>
+                  <SelectItem value="asistente">{ROL_LABEL.asistente}</SelectItem>
+                  <SelectItem value="colaborador">{ROL_LABEL.colaborador}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -196,12 +198,13 @@ function UserRow({ profile }: { profile: Profile }) {
           }}
           disabled={saving}
         >
-          <SelectTrigger className="h-8 w-32" aria-label={`Rol de ${profile.nombre}`}>
+          <SelectTrigger className="h-8 w-36" aria-label={`Rol de ${profile.nombre}`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="colaborador">Colaborador</SelectItem>
-            <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="admin">{ROL_LABEL.admin}</SelectItem>
+            <SelectItem value="asistente">{ROL_LABEL.asistente}</SelectItem>
+            <SelectItem value="colaborador">{ROL_LABEL.colaborador}</SelectItem>
           </SelectContent>
         </Select>
       </TableCell>

@@ -38,3 +38,17 @@ export async function requireAdmin() {
 
   return { user, profile };
 }
+
+/**
+ * Igual que requireUser pero además exige rol admin o asistente (los
+ * únicos con acceso a /invitados). Redirige a "/" si no lo es.
+ */
+export async function requireAdminOrAsistente() {
+  const { user, profile } = await requireUser();
+
+  if ((profile.rol !== "admin" && profile.rol !== "asistente") || !profile.activo) {
+    redirect("/");
+  }
+
+  return { user, profile };
+}
