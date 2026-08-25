@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireUser } from "@/lib/auth";
+import { requireAdminOrAsistente } from "@/lib/auth";
 import { GuestForm } from "@/components/guest-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,7 +9,7 @@ import type { ParkingSpot, ReservationWithRelations } from "@/lib/database.types
 export const metadata = { title: "Invitados — Cocheras Comafi" };
 
 export default async function InvitadosPage() {
-  await requireUser();
+  await requireAdminOrAsistente();
   const supabase = await createClient();
 
   const { data: spots } = await supabase

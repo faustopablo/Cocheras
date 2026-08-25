@@ -16,6 +16,16 @@ export async function createGuestReservationAction(input: {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return { ok: false, error: "No hay sesión activa." };
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("rol,activo")
+    .eq("id", userData.user.id)
+    .single();
+
+  if (!profile || (profile.rol !== "admin" && profile.rol !== "asistente") || !profile.activo) {
+    return { ok: false, error: "Solo un administrador o asistente puede gestionar invitados." };
+  }
+
   if (!input.nombre.trim() || !input.patente.trim()) {
     return { ok: false, error: "Nombre y patente son obligatorios." };
   }

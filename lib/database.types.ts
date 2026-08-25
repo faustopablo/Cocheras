@@ -1,7 +1,7 @@
 // Tipos TypeScript que reflejan el esquema SQL de supabase/migrations.
 // Mantener en sincronía manualmente (o regenerar con `supabase gen types typescript`).
 
-export type Rol = "admin" | "colaborador";
+export type Rol = "admin" | "asistente" | "colaborador";
 export type Jerarquia = "directivo" | "gerente" | "colaborador";
 export type TipoCochera = "fija" | "libre";
 export type EstadoCochera = "libre" | "ocupada" | "bloqueada" | "fuera_de_servicio";

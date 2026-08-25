@@ -7,19 +7,15 @@ import { formatDate } from "@/lib/utils";
 import {
   CocherasFijasSection,
   HistorialReservasSection,
+  ROL_LABEL,
   type AssignmentWithSpot,
   type ReservationWithSpot,
 } from "@/components/user-profile-sections";
-import type { EstadoReserva, FixedSpotRelease, Jerarquia, Rol } from "@/lib/database.types";
+import type { EstadoReserva, FixedSpotRelease, Jerarquia } from "@/lib/database.types";
 
 export const metadata = { title: "Mi perfil — Cocheras Comafi" };
 
 const RESERVAS_POR_PAGINA = 20;
-
-const ROL_LABEL: Record<Rol, string> = {
-  admin: "Admin",
-  colaborador: "Colaborador",
-};
 
 const JERARQUIA_LABEL: Record<Jerarquia, string> = {
   directivo: "Directivo",
