@@ -47,6 +47,7 @@ export function SpotsBoard({
   fixedSpotAssignments,
   fixedSpotReleases,
   currentUserId,
+  ownerNamesByUserId,
 }: {
   buildings: Building[];
   levels: Level[];
@@ -55,6 +56,11 @@ export function SpotsBoard({
   fixedSpotAssignments: FixedSpotAssignment[];
   fixedSpotReleases: FixedSpotRelease[];
   currentUserId: string;
+  /** Nombre de cada dueño de cochera fija, por user_id. Solo lo recibe el
+   * admin (la página server-side lo trae con la RLS de admin en
+   * `profiles`); para el resto de los usuarios no se pasa, así nunca se
+   * intenta mostrar nombres de otros colaboradores. */
+  ownerNamesByUserId?: Record<string, string>;
 }) {
   const router = useRouter();
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null);
@@ -396,25 +402,41 @@ export function SpotsBoard({
 
                       {levelExpanded && (
                         <div className="grid grid-cols-4 gap-2 bg-card p-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
-                          {levelSpots.map((spot) => (
-                            <SpotCard
-                              key={spot.id}
-                              spot={spot}
-                              display={
-                                displayBySpotId.get(spot.id) ?? {
-                                  estado: spot.estado,
-                                  esMia: false,
-                                  esReservaPropia: false,
-                                  reservaActiva: null,
-                                  esProyeccion: !esHoy,
-                                }
-                              }
-                              onReservar={(s) => {
-                                setSelectedSpot(s);
-                                setDialogOpen(true);
-                              }}
-                            />
-                          ))}
+                          {levelSpots.map((spot) => {
+                            const display =
+                              displayBySpotId.get(spot.id) ?? {
+                                estado: spot.estado,
+                                esMia: false,
+                                esReservaPropia: false,
+                                reservaActiva: null,
+                                esProyeccion: !esHoy,
+                                asignacionDelDia: null,
+                              };
+                            const ownerId = display.asignacionDelDia?.user_id;
+                            // Solo el admin recibe `ownerNamesByUserId`, y solo lo
+                            // mostramos en "asignada" (dueño de otro, no liberada) y
+                            // "libre por liberación del dueño"; en "ocupada" ya hay
+                            // una reserva puntual de un tercero que manda, y en "tu
+                            // día" el dueño soy yo (ownerId === currentUserId).
+                            const ownerName =
+                              ownerId &&
+                              ownerId !== currentUserId &&
+                              (display.estado === "asignada" || display.estado === "libre")
+                                ? ownerNamesByUserId?.[ownerId]
+                                : undefined;
+                            return (
+                              <SpotCard
+                                key={spot.id}
+                                spot={spot}
+                                display={display}
+                                ownerName={ownerName}
+                                onReservar={(s) => {
+                                  setSelectedSpot(s);
+                                  setDialogOpen(true);
+                                }}
+                              />
+                            );
+                          })}
                         </div>
                       )}
                     </div>

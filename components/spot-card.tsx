@@ -14,10 +14,15 @@ import type { ParkingSpot } from "@/lib/database.types";
 export function SpotCard({
   spot,
   display,
+  ownerName,
   onReservar,
 }: {
   spot: ParkingSpot;
   display: SpotDisplayInfo;
+  /** Nombre del dueño fijo de la cochera para el día visto, solo cuando
+   * quien mira es admin (ver components/spots-board.tsx). No definido para
+   * el resto de los usuarios ni cuando el dueño es el propio usuario. */
+  ownerName?: string;
   onReservar?: (spot: ParkingSpot) => void;
 }) {
   const { estado, esMia, esReservaPropia, reservaActiva } = display;
@@ -33,6 +38,10 @@ export function SpotCard({
   const ocupadaPorOtro = reservadaPorOtro || asignadaAOtro;
   const libre = estado === "libre" && !esMia;
   const puedeReservar = estado === "libre" && !esMia;
+  // El dueño fijo liberó su día: la cochera queda "libre" para todos, pero
+  // sigue teniendo dueño ese día de la semana (solo relevante para el admin,
+  // que es a quien le llega `ownerName`).
+  const liberadaPorDueno = libre && !!ownerName;
 
   // El estado de las no reservables ya se comunica en la propia tarjeta
   // (color + chip "Asignada"/"Ocupada"); el title amplía el detalle al hover.
@@ -117,6 +126,20 @@ export function SpotCard({
       >
         {spot.codigo}
       </span>
+
+      {ownerName && (
+        <span
+          title={liberadaPorDueno ? `${ownerName} (liberada)` : ownerName}
+          className={cn(
+            "block w-full max-w-full truncate px-1 text-[10px] font-semibold",
+            asignadaAOtro && "text-white",
+            liberadaPorDueno && "text-muted-foreground"
+          )}
+        >
+          {ownerName}
+          {liberadaPorDueno && " (liberada)"}
+        </span>
+      )}
 
       {esReservaPropia && reservaActiva && (
         <span className="text-[10px] font-semibold text-white">Tu reserva</span>
