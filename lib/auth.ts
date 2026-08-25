@@ -25,6 +25,15 @@ export async function requireUser() {
     redirect("/login");
   }
 
+  // Defensa en profundidad: el proxy (lib/supabase/middleware.ts) ya corta
+  // el acceso de usuarios inactivos en todas las rutas autenticadas, pero
+  // este chequeo cubre cualquier caso en que se invoque `requireUser` sin
+  // pasar por el proxy.
+  if (!(profile as Profile).activo) {
+    await supabase.auth.signOut();
+    redirect("/login?error=inactivo");
+  }
+
   return { user: userData.user, profile: profile as Profile };
 }
 

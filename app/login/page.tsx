@@ -8,9 +8,9 @@ export const metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ redirectTo?: string }>;
+  searchParams: Promise<{ redirectTo?: string; error?: string }>;
 }) {
-  const { redirectTo } = await searchParams;
+  const { redirectTo, error } = await searchParams;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-comafi-negro-verdoso p-4">
@@ -28,6 +28,14 @@ export default async function LoginPage({
             <CardDescription>Usá tu cuenta corporativa @comafi.com.ar</CardDescription>
           </CardHeader>
           <CardContent>
+            {error === "inactivo" && (
+              <p
+                role="alert"
+                className="mb-4 text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2"
+              >
+                Tu usuario está desactivado. Contactá a un administrador de Cocheras Comafi.
+              </p>
+            )}
             <LoginForm redirectTo={redirectTo || "/"} />
           </CardContent>
         </Card>
