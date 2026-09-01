@@ -268,12 +268,29 @@ Puntos clave:
   real (no hay credenciales en este entorno), pero el código y el SQL están
   listos para `supabase functions deploy` / `supabase db push`.
 
-## Paleta de marca
+## Branding
 
-- Verde claro: `#01866C`
-- Verde oscuro: `#005458`
-- Negro verdoso: `#00252F`
+### Paleta de marca
+
+- Verde Comafi Claro: `#01866C` (títulos sobre fondo claro, destacados, fondos, números, íconos)
+- Verde Comafi Oscuro: `#005458` (gráficos, fondos, contenedores de íconos, líneas)
+- Verde Comafi Black: `#00252F` (gráficos, contenedores, marcos)
+- Gris: `#575757` (legales/textos de última lectura, gráficos, contenedores de íconos, marcos de texto)
 
 Definida como variables CSS en `app/globals.css` (`--comafi-verde-claro`,
-`--comafi-verde-oscuro`, `--comafi-negro-verdoso`) y expuesta a Tailwind vía
-`@theme inline` (`bg-comafi-verde-claro`, etc.).
+`--comafi-verde-oscuro`, `--comafi-negro-verdoso`, `--comafi-gris`) y expuesta
+a Tailwind vía `@theme inline` (`bg-comafi-verde-claro`, `text-comafi-gris`, etc.).
+El gris de marca es además el valor de `--muted-foreground` (texto secundario).
+
+### Logos
+
+Los archivos actuales son un **wordmark tipográfico provisorio** ("Comafi" en
+texto plano, sin isotipo). Cuando Marketing entregue el asset oficial
+(isotipo + wordmark), reemplazar estos archivos manteniendo los nombres:
+
+- `public/logo-comafi.svg`: variante para fondo claro (wordmark en verde oscuro).
+- `public/logo-comafi-blanco.svg`: variante para fondo oscuro (wordmark en blanco,
+  isotipo en sus dos verdes). Se usa en la navbar y en la página de login.
+
+Si el asset oficial incluye el isotipo, agregar también un favicon
+(`app/icon.svg` o `app/favicon.ico`) derivado del isotipo.

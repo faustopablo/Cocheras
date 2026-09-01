@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -38,11 +39,19 @@ export function Navbar({ profile }: { profile: Profile }) {
     <header className="sticky top-0 z-40 bg-comafi-negro-verdoso text-white shadow-sm">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2 font-bold">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm">
-              C
+          <Link href="/" className="flex items-center gap-2.5 font-bold">
+            {/* Wordmark provisorio: reemplazar public/logo-comafi-blanco.svg por el asset oficial de Marketing (ver README, "Branding"). */}
+            <Image
+              src="/logo-comafi-blanco.svg"
+              alt="Comafi"
+              width={98}
+              height={28}
+              priority
+              className="h-7 w-auto"
+            />
+            <span className="hidden border-l border-white/30 pl-2.5 text-sm font-semibold sm:inline">
+              Cocheras
             </span>
-            <span className="hidden sm:inline">Cocheras Comafi</span>
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
             {navLinks.map((l) => (

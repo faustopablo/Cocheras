@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoginForm } from "./login-form";
 
@@ -16,10 +17,16 @@ export default async function LoginPage({
     <main className="flex min-h-screen items-center justify-center bg-comafi-negro-verdoso p-4">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-xl font-bold text-primary-foreground">
-            C
-          </div>
-          <h1 className="text-2xl font-bold text-white">Cocheras Comafi</h1>
+          {/* Wordmark provisorio: reemplazar public/logo-comafi-blanco.svg por el asset oficial de Marketing (ver README, "Branding"). */}
+          <Image
+            src="/logo-comafi-blanco.svg"
+            alt="Comafi"
+            width={140}
+            height={40}
+            priority
+            className="mx-auto mb-4 h-10 w-auto"
+          />
+          <h1 className="text-2xl font-bold text-white">Cocheras</h1>
           <p className="text-sm text-white/70">Reserva de cocheras corporativas</p>
         </div>
         <Card>
