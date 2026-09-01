@@ -40,11 +40,10 @@ export function Navbar({ profile }: { profile: Profile }) {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2.5 font-bold">
-            {/* Wordmark provisorio: reemplazar public/logo-comafi-blanco.svg por el asset oficial de Marketing (ver README, "Branding"). */}
             <Image
-              src="/logo-comafi-blanco.svg"
+              src="/logo-comafi-blanco.png"
               alt="Comafi"
-              width={98}
+              width={102}
               height={28}
               priority
               className="h-7 w-auto"

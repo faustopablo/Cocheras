@@ -284,13 +284,12 @@ El gris de marca es además el valor de `--muted-foreground` (texto secundario).
 
 ### Logos
 
-Los archivos actuales son un **wordmark tipográfico provisorio** ("Comafi" en
-texto plano, sin isotipo). Cuando Marketing entregue el asset oficial
-(isotipo + wordmark), reemplazar estos archivos manteniendo los nombres:
+Assets oficiales (PNG con fondo transparente, provistos por Marketing):
 
-- `public/logo-comafi.svg`: variante para fondo claro (wordmark en verde oscuro).
-- `public/logo-comafi-blanco.svg`: variante para fondo oscuro (wordmark en blanco,
-  isotipo en sus dos verdes). Se usa en la navbar y en la página de login.
+- `public/logo-comafi.png`: variante para fondo claro (isotipo + wordmark en verde oscuro).
+- `public/logo-comafi-blanco.png`: variante para fondo oscuro (isotipo en sus dos
+  verdes, wordmark en blanco). Se usa en la navbar y en la página de login.
+- `app/icon.png`: favicon (isotipo recortado del logo oficial, 512×512).
 
-Si el asset oficial incluye el isotipo, agregar también un favicon
-(`app/icon.svg` o `app/favicon.ico`) derivado del isotipo.
+Si Marketing entrega versiones SVG, reemplazar los PNG manteniendo la
+referencia en `components/navbar.tsx` y `app/login/page.tsx`.
