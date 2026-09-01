@@ -8,12 +8,14 @@
   --comafi-verde-claro: #01866c;
   --comafi-verde-oscuro: #005458;
   --comafi-negro-verdoso: #00252f;
+  /* Gris de marca: legales y textos de última lectura (≈7:1 sobre blanco, AA). */
+  --comafi-gris: #575757;
 
   --card: #ffffff;
   --card-foreground: #00252f;
   --border: #d7e3e1;
   --muted: #eef4f3;
-  --muted-foreground: #4b6360;
+  --muted-foreground: var(--comafi-gris);
   --primary: var(--comafi-verde-claro);
   --primary-foreground: #ffffff;
   --secondary: var(--comafi-verde-oscuro);
@@ -52,6 +54,7 @@
   --color-comafi-verde-claro: var(--comafi-verde-claro);
   --color-comafi-verde-oscuro: var(--comafi-verde-oscuro);
   --color-comafi-negro-verdoso: var(--comafi-negro-verdoso);
+  --color-comafi-gris: var(--comafi-gris);
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --radius-lg: var(--radius);
 }

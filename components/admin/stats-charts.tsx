@@ -34,6 +34,9 @@ const PALETTE = {
   aqua: "#1baf7a", // el más cercano al verde Comafi dentro de la paleta validada
 };
 
+// Gris de marca Comafi (var(--comafi-gris)) para ejes y leyendas.
+const AXIS_TICK = { fill: "var(--comafi-gris)" };
+
 const JERARQUIA_LABEL: Record<string, string> = {
   colaborador: "Colaborador",
   gerente: "Gerente",
@@ -114,8 +117,8 @@ export function OcupacionPorEdificioChart({ data }: { data: OcupacionPorEdificio
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-          <XAxis dataKey="edificio" tick={{ fontSize: 12 }} />
-          <YAxis unit="%" tick={{ fontSize: 12 }} />
+          <XAxis dataKey="edificio" tick={{ ...AXIS_TICK, fontSize: 12 }} />
+          <YAxis unit="%" tick={{ ...AXIS_TICK, fontSize: 12 }} />
           <Tooltip formatter={(value) => [`${value}%`, "Ocupación"]} />
           <Bar dataKey="ocupacion" fill={PALETTE.blue} radius={[4, 4, 0, 0]} name="Ocupación" />
         </BarChart>
@@ -154,8 +157,8 @@ export function OcupacionPorSubsueloChart({ data }: { data: OcupacionPorSubsuelo
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-          <XAxis dataKey="etiqueta" tick={{ fontSize: 11 }} />
-          <YAxis unit="%" tick={{ fontSize: 12 }} />
+          <XAxis dataKey="etiqueta" tick={{ ...AXIS_TICK, fontSize: 11 }} />
+          <YAxis unit="%" tick={{ ...AXIS_TICK, fontSize: 12 }} />
           <Tooltip formatter={(value) => [`${value}%`, "Ocupación"]} />
           <Bar dataKey="ocupacion" fill={PALETTE.orange} radius={[4, 4, 0, 0]} name="Ocupación" />
         </BarChart>
@@ -192,8 +195,8 @@ export function OcupacionPorDiaSemanaChart({ data }: { data: OcupacionPorDiaSema
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-          <XAxis dataKey="dia" tick={{ fontSize: 12 }} />
-          <YAxis unit="%" tick={{ fontSize: 12 }} />
+          <XAxis dataKey="dia" tick={{ ...AXIS_TICK, fontSize: 12 }} />
+          <YAxis unit="%" tick={{ ...AXIS_TICK, fontSize: 12 }} />
           <Tooltip formatter={(value) => [`${value}%`, "% de reservas"]} />
           <Bar dataKey="ocupacion" fill={PALETTE.aqua} radius={[4, 4, 0, 0]} name="% de reservas" />
         </BarChart>
@@ -234,8 +237,8 @@ export function RotacionPorJerarquiaChart({ data }: { data: RotacionPorJerarquia
           margin={{ top: 8, right: 8, left: 0, bottom: 8 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-          <XAxis dataKey="jerarquiaLabel" tick={{ fontSize: 12 }} />
-          <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+          <XAxis dataKey="jerarquiaLabel" tick={{ ...AXIS_TICK, fontSize: 12 }} />
+          <YAxis allowDecimals={false} tick={{ ...AXIS_TICK, fontSize: 12 }} />
           <Tooltip />
           <Bar dataKey="reservas" radius={[4, 4, 0, 0]} name="Reservas">
             {data.map((_, i) => (
@@ -300,8 +303,8 @@ export function RankingCocherasChart({
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={masUsadas} layout="vertical" margin={{ left: 24 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
-            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
-            <YAxis type="category" dataKey="codigo" tick={{ fontSize: 12 }} width={70} />
+            <XAxis type="number" allowDecimals={false} tick={{ ...AXIS_TICK, fontSize: 12 }} />
+            <YAxis type="category" dataKey="codigo" tick={{ ...AXIS_TICK, fontSize: 12 }} width={70} />
             <Tooltip />
             <Bar dataKey="usos" fill={PALETTE.aqua} radius={[0, 4, 4, 0]} name="Usos" />
           </BarChart>
@@ -315,8 +318,8 @@ export function RankingCocherasChart({
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={menosUsadas} layout="vertical" margin={{ left: 24 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
-            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
-            <YAxis type="category" dataKey="codigo" tick={{ fontSize: 12 }} width={70} />
+            <XAxis type="number" allowDecimals={false} tick={{ ...AXIS_TICK, fontSize: 12 }} />
+            <YAxis type="category" dataKey="codigo" tick={{ ...AXIS_TICK, fontSize: 12 }} width={70} />
             <Tooltip />
             <Bar dataKey="usos" fill={PALETTE.blue} radius={[0, 4, 4, 0]} name="Usos" />
           </BarChart>
