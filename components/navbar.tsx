@@ -48,9 +48,6 @@ export function Navbar({ profile }: { profile: Profile }) {
               priority
               className="h-7 w-auto"
             />
-            <span className="hidden border-l border-white/30 pl-2.5 text-sm font-semibold sm:inline">
-              Cocheras
-            </span>
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
             {navLinks.map((l) => (
