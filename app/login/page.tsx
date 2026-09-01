@@ -17,11 +17,10 @@ export default async function LoginPage({
     <main className="flex min-h-screen items-center justify-center bg-comafi-negro-verdoso p-4">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
-          {/* Wordmark provisorio: reemplazar public/logo-comafi-blanco.svg por el asset oficial de Marketing (ver README, "Branding"). */}
           <Image
-            src="/logo-comafi-blanco.svg"
+            src="/logo-comafi-blanco.png"
             alt="Comafi"
-            width={140}
+            width={146}
             height={40}
             priority
             className="mx-auto mb-4 h-10 w-auto"
